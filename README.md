@@ -23,7 +23,7 @@ A Neovim plugin for working with [Jujutsu](https://github.com/martinvonz/jj) ver
 
 ```lua
 vim.pack.add({
-  src = "https://github.com/yourusername/jujutsu.nvim"
+  src = "https://github.com/yannvanhalewyn/jujutsu.nvim"
 })
 ```
 
@@ -34,10 +34,9 @@ The plugin will automatically set up the `:JJ` command when loaded.
 If you prefer to call setup manually:
 
 ```lua
+vim.keymap.set("n", "<leader>j", ":JJ<CR>", { desc = "JJ Log" })
+-- Or use via the lua API:
 local jj = require("jj")
-jj.setup()
-
--- Optional: Add a keymap for quick access
 vim.keymap.set("n", "<leader>j", jj.log, { desc = "JJ Log" })
 ```
 
@@ -59,11 +58,12 @@ vim.keymap.set("n", "<leader>j", jj.log, { desc = "JJ Log" })
 - `R` - Refresh log
 - `d` - Describe (edit description)
 - `n` - Create new change after current
+- `N` - Create new with options
 - `a` - Abandon change
 - `e` - Edit (check out) change
-- `r` - Rebase change
-- `s` - Squash change into parent
-- `S` - Squash change into selected target
+- `r` - Rebase change onto another change
+- `s` - Squash change into it's parent
+- `S` - Squash change into another target
 
 #### Multi-Selection
 - `m` - Toggle selection for current change
