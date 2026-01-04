@@ -244,6 +244,13 @@ local function edit_change(change_id)
   end)
 end
 
+local function undo()
+  jj.undo(nil, function()
+    vim.notify("Undid latest operation", vim.log.levels.INFO)
+    M.log()
+  end)
+end
+
 --------------------------------------------------------------------------------
 -- Rebase operations
 --------------------------------------------------------------------------------
@@ -502,6 +509,7 @@ local function setup_log_keymaps(buf)
   map("e", function() with_change_at_cursor(edit_change) end, "Edit (check out) change")
   map("r", rebase_change, "Rebase change")
   map("s", squash_change, "Squash change")
+  map("u", undo, "Squash change")
   map("S", function() with_change_at_cursor(squash_to_target) end, "Squash into target")
 
   -- Multi-select

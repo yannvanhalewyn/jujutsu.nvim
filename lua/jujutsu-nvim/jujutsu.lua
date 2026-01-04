@@ -15,27 +15,6 @@ local function run_jj_command(args, on_success, on_error)
 end
 
 --------------------------------------------------------------------------------
--- Basic Operations
-
-M.new_change = function(change_id, on_success)
-  run_jj_command({ "jj", "new", change_id }, on_success)
-end
-
-M.abandon_change = function(change_id, on_success)
-  run_jj_command({ "jj", "abandon", change_id }, on_success)
-end
-
-M.edit_change = function(change_id, on_success)
-  run_jj_command({ "jj", "edit", change_id }, on_success)
-end
-
-M.describe = function(change_id, new_description, on_success)
-  run_jj_command(
-    { "jj", "describe", "-r", change_id, "-m", new_description },
-    on_success)
-end
-
---------------------------------------------------------------------------------
 -- Change queries
 
 M.make_revset = function(change_ids)
@@ -83,6 +62,31 @@ M.get_changes_by_ids = function(change_ids, callback)
     end
     callback(changes)
   end)
+end
+
+--------------------------------------------------------------------------------
+-- Basic Operations
+
+M.new_change = function(change_id, on_success)
+  run_jj_command({ "jj", "new", change_id }, on_success)
+end
+
+M.abandon_change = function(change_id, on_success)
+  run_jj_command({ "jj", "abandon", change_id }, on_success)
+end
+
+M.edit_change = function(change_id, on_success)
+  run_jj_command({ "jj", "edit", change_id }, on_success)
+end
+
+M.describe = function(change_id, new_description, on_success)
+  run_jj_command(
+    { "jj", "describe", "-r", change_id, "-m", new_description },
+    on_success)
+end
+
+M.undo = function(op_id, on_success)
+  run_jj_command({ "jj", "undo", op_id }, on_success)
 end
 
 --------------------------------------------------------------------------------
