@@ -108,176 +108,6 @@ local function with_change_at_cursor(operation)
 end
 
 --------------------------------------------------------------------------------
--- Floating prompt window
---------------------------------------------------------------------------------
-
--- Define highlight group for prompt keys (yellow/orange)
-vim.api.nvim_set_hl(0, "JJPromptKey", { fg = "#FFA500", bold = true })
-
--- Show a floating window with single-key options
--- @param opts table with:
---   - prompt: string - question to ask user
---   - options: table - list of {key: string, label: string, value: any}
---   - on_select: function(value) - callback with selected option's value
---   - on_cancel: function() - optional callback on cancel/escape
-local function show_floating_prompt(opts)
-  local prompt = opts.prompt or "Select an option:"
-  local options = opts.options or {}
-
-  -- Build content lines with padding
-  local lines = { "", "  " .. prompt, "" }
-  local key_map = {}
-  local key_highlights = {}  -- Track where to highlight keys
-
-  for _, option in ipairs(options) do
-    local line = string.format("    %s  %s", option.key, option.label)
-    table.insert(lines, line)
-
-    -- Track position of key for highlighting (accounting for padding)
-    local line_idx = #lines - 1  -- 0-based index
-    table.insert(key_highlights, { line = line_idx, col_start = 4, col_end = 4 + #option.key })
-
-    key_map[option.key:lower()] = option.value or option.key
-    -- Also support uppercase if provided
-    key_map[option.key:upper()] = option.value or option.key
-  end
-
-  -- Add help text
-  table.insert(lines, "")
-  table.insert(lines, "    <Esc> or q to cancel")
-  table.insert(lines, "")
-
-  -- Calculate window size (accounting for padding)
-  local width = 0
-  for _, line in ipairs(lines) do
-    width = math.max(width, vim.fn.strdisplaywidth(line))
-  end
-  width = math.min(width + 4, math.floor(vim.o.columns * 0.8))
-  local height = #lines
-
-  -- Create buffer
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.bo[buf].modifiable = false
-  vim.bo[buf].bufhidden = 'wipe'
-
-  -- Calculate window position (centered)
-  local row = math.floor((vim.o.lines - height) / 2)
-  local col = math.floor((vim.o.columns - width) / 2)
-
-  -- Create window
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = 'editor',
-    row = row,
-    col = col,
-    width = width,
-    height = height,
-    style = 'minimal',
-    border = 'rounded',
-    title = ' JJ ',
-    title_pos = 'center',
-  })
-
-  -- Hide cursor completely
-  vim.api.nvim_win_set_option(win, 'cursorline', false)
-  vim.api.nvim_win_set_option(win, 'cursorcolumn', false)
-
-  -- Store original guicursor to restore later
-  local original_guicursor = vim.o.guicursor
-
-  -- Multiple approaches to hide cursor for maximum compatibility:
-  -- 1. Set cursor highlight to reverse video (makes it invisible on most backgrounds)
-  local original_cursor_hl = vim.api.nvim_get_hl(0, { name = 'Cursor' })
-  local original_lcursor_hl = vim.api.nvim_get_hl(0, { name = 'lCursor' })
-  vim.api.nvim_set_hl(0, 'Cursor', { reverse = false, blend = 100 })
-  vim.api.nvim_set_hl(0, 'lCursor', { reverse = false, blend = 100 })
-
-  -- 2. Hide guicursor
-  vim.o.guicursor = 'a:hor1-Cursor/lCursor'
-
-  -- Apply highlighting to keys
-  for _, hl in ipairs(key_highlights) do
-    vim.api.nvim_buf_add_highlight(buf, -1, 'JJPromptKey', hl.line, hl.col_start, hl.col_end)
-  end
-
-  -- Apply highlighting to help text
-  local help_line = #lines - 2
-  vim.api.nvim_buf_add_highlight(buf, -1, 'Comment', help_line, 0, -1)
-
-  -- Cleanup function
-  local function cleanup()
-    if vim.api.nvim_win_is_valid(win) then
-      vim.api.nvim_win_close(win, true)
-    end
-    -- Restore cursor visibility
-    vim.o.guicursor = original_guicursor
-    vim.api.nvim_set_hl(0, 'Cursor', original_cursor_hl)
-    vim.api.nvim_set_hl(0, 'lCursor', original_lcursor_hl)
-  end
-
-  -- Handle key press
-  local function handle_key(key)
-    local value = key_map[key]
-    if value then
-      cleanup()
-      if opts.on_select then
-        opts.on_select(value)
-      end
-      return true
-    end
-    return false
-  end
-
-  -- Cancel handler
-  local function cancel()
-    cleanup()
-    if opts.on_cancel then
-      opts.on_cancel()
-    end
-  end
-
-  -- Set up keymaps for each option key
-  for key, _ in pairs(key_map) do
-    vim.keymap.set('n', key, function()
-      handle_key(key)
-    end, { buffer = buf, silent = true })
-  end
-
-  -- Escape to cancel
-  vim.keymap.set('n', '<Esc>', cancel, { buffer = buf, silent = true })
-  vim.keymap.set('n', 'q', cancel, { buffer = buf, silent = true })
-
-  -- Auto-close on buffer leave
-  vim.api.nvim_create_autocmd('BufLeave', {
-    buffer = buf,
-    once = true,
-    callback = cancel
-  })
-end
-
--- Prompt for yes/no confirmation
--- @param prompt string - question to ask (without the y/N suffix)
--- @param on_confirm function() - callback if user confirms
--- @param on_cancel function() - optional callback if user cancels
-local function confirm(prompt, on_confirm, on_cancel)
-  show_floating_prompt({
-    prompt = prompt,
-    options = {
-      { key = 'Y', label = 'Yes', value = true },
-      { key = 'N', label = 'No', value = false },
-    },
-    on_select = function(confirmed)
-      if confirmed and on_confirm then
-        on_confirm()
-      elseif not confirmed and on_cancel then
-        on_cancel()
-      end
-    end,
-    on_cancel = on_cancel
-  })
-end
-
---------------------------------------------------------------------------------
 -- Editor buffer
 --------------------------------------------------------------------------------
 
@@ -319,6 +149,7 @@ local function open_editor_buffer(opts)
 
   -- Submit and abort handlers
   local function submit()
+    -- Makes it so the cursor remains at top after edit buffer close
     vim.cmd.stopinsert()
     local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
     vim.api.nvim_buf_delete(buf, { force = true })
@@ -364,6 +195,7 @@ end
 --------------------------------------------------------------------------------
 
 local jj = require("jujutsu-nvim.jujutsu")
+local dialog_window = require("jujutsu-nvim.dialog_window")
 
 local function new_change(change_id)
   jj.new_change(change_id, function()
@@ -392,7 +224,7 @@ local function describe(change_id)
 end
 
 local function abandon_change(change_id)
-  confirm(
+  dialog_window.confirm(
     string.format("Abandon change %s?", change_id:sub(1, 8)),
     function()
       jj.abandon_change(change_id, function()
@@ -451,10 +283,10 @@ local function prompt_source_type(cb)
     })
   end
 
-  show_floating_prompt({
+  dialog_window.show_floating_options({
     prompt = 'Rebase source type:',
     options = options,
-    on_select = cb,
+    on_select = function(option) cb(option.value) end,
     on_cancel = function()
       vim.notify("Rebase cancelled", vim.log.levels.INFO)
     end
@@ -471,10 +303,10 @@ local function prompt_destination_type(cb)
     })
   end
 
-  show_floating_prompt({
+  dialog_window.show_floating_options({
     prompt = 'Rebase destination type:',
     options = options,
-    on_select = cb,
+    on_select = function(option) cb(option.value) end,
     on_cancel = function()
       vim.notify("Rebase cancelled", vim.log.levels.INFO)
     end
@@ -484,7 +316,7 @@ end
 local function execute_rebase(source_ids, source_type, dest_id, dest_type)
   local prompt = jj.build_rebase_confirmation_msg(source_ids, dest_type, dest_id)
 
-  confirm(
+  dialog_window.confirm(
     prompt,
     function()
       jj.execute_rebase(source_ids, source_type, dest_id, dest_type, function()
