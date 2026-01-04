@@ -35,12 +35,13 @@ end
 -- Selection state (set of change IDs)
 M.selected_changes = {}
 
+local ns_id = vim.api.nvim_create_namespace("jj_selections")
+
 -- Clear all selections
 local function clear_selections()
   M.selected_changes = {}
   if M.jj_buffer and vim.api.nvim_buf_is_valid(M.jj_buffer) then
     -- Clear all extmarks for selections
-    local ns_id = vim.api.nvim_create_namespace("jj_selections")
     vim.api.nvim_buf_clear_namespace(M.jj_buffer, ns_id, 0, -1)
   end
 end
@@ -52,15 +53,6 @@ local function toggle_selection(change_id)
   else
     M.selected_changes[change_id] = true
   end
-end
-
--- Get count of selected changes
-local function get_selection_count()
-  local count = 0
-  for _ in pairs(M.selected_changes) do
-    count = count + 1
-  end
-  return count
 end
 
 -- Get list of selected change IDs
@@ -115,21 +107,6 @@ local function with_change_at_cursor(operation)
   end
 end
 
--- Run a jj command and handle result with callback
-local function run_jj_command(args, on_success, on_error)
-  local result = vim.system(args, { text = true }):wait()
-
-  if result.code == 0 then
-    if on_success then on_success(result) end
-  else
-    if on_error then
-      on_error(result)
-    else
-      vim.notify("Command failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
-    end
-  end
-end
-
 -- Cleanup jj window and buffer
 local function close_jj_window()
   if M.jj_buffer and vim.api.nvim_buf_is_valid(M.jj_buffer) then
@@ -143,55 +120,8 @@ local function close_jj_window()
 end
 
 --------------------------------------------------------------------------------
--- Jujutsu API
+-- Editor buffer
 --------------------------------------------------------------------------------
-
-local function jj_make_revset(change_ids)
-  return table.concat(change_ids, " | ")
-end
-
-local function jj_get_changes(revset, callback)
-  local template = 'separate(";", change_id.short(), coalesce(description, " ")) ++ "\n---END-CHANGE---\n"'
-
-  run_jj_command(
-    { "jj", "log", "--no-graph", "-r", revset, "-T", template },
-    function(result)
-      local output = result.stdout or ""
-      local changes = {}
-
-      -- Split by end-of-change separator
-      for change_block in output:gmatch("(.-)\n%-%-%-END%-CHANGE%-%-%-\n") do
-        if change_block ~= "" then
-          -- Split on first semicolon only (to handle multiline descriptions)
-          local change_id, description = change_block:match("^([^;]*);(.*)$")
-          if change_id then
-            -- Trim the change_id and preserve description as-is (including newlines)
-            change_id = change_id:gsub("^%s*(.-)%s*$", "%1")
-            table.insert(changes, {
-              change_id = change_id,
-              description = description
-            })
-          end
-        end
-      end
-
-      callback(changes)
-    end,
-    function(result)
-      vim.notify("Failed to get changes: " .. (result.stderr or ""), vim.log.levels.ERROR)
-    end
-  )
-end
-
-local function jj_get_changes_by_ids(change_ids, callback)
-  jj_get_changes(jj_make_revset(change_ids), function(changes)
-    if #changes ~= #change_ids then
-      vim.notify("Could not get change information", vim.log.levels.ERROR)
-      return
-    end
-    callback(changes)
-  end)
-end
 
 -- Open an editor buffer meant to capture user input
 -- @param opts table with:
@@ -275,20 +205,18 @@ end
 -- Basic Operations
 --------------------------------------------------------------------------------
 
+local jj = require("jujutsu-nvim.jujutsu")
+
 local function describe(change_id)
-  jj_get_changes_by_ids({ change_id }, function(changes)
+  jj.get_changes_by_ids({ change_id }, function(changes)
     local description = changes[1].description
     open_editor_buffer({
       content = description,
       filetype = 'jjdescription',
       on_submit = function(new_description)
-        run_jj_command(
-          { "jj", "describe", "-r", change_id, "-m", new_description },
-          function()
-            vim.notify("Description updated for " .. change_id:sub(1, 8), vim.log.levels.INFO)
-            M.log()
-          end
-        )
+        jj.describe(change_id, new_description, function()
+          M.log()
+        end)
       end,
       on_abort = function()
         vim.notify("Aborted description edit", vim.log.levels.INFO)
@@ -297,43 +225,19 @@ local function describe(change_id)
   end)
 end
 
-local function new_change(change_id)
-  run_jj_command(
-    { "jj", "new", change_id },
-    function()
-      vim.notify("Created new change after " .. change_id, vim.log.levels.INFO)
-      M.log()
-    end
-  )
-end
-
 local function abandon_change(change_id)
   vim.ui.input({
     prompt = string.format("Abandon change %s? (y/N): ", change_id:sub(1, 8))
   }, function(input)
+
     if not input or (input:lower() ~= "y" and input:lower() ~= "yes") then
       vim.notify("Abandon cancelled", vim.log.levels.INFO)
       return
     end
-
-    run_jj_command(
-      { "jj", "abandon", change_id },
-      function()
-        vim.notify("Abandoned change " .. change_id, vim.log.levels.INFO)
-        M.log()
-      end
-    )
-  end)
-end
-
-local function edit_change(change_id)
-  run_jj_command(
-    { "jj", "edit", change_id },
-    function()
-      vim.notify("Checked out change " .. change_id, vim.log.levels.INFO)
+    jj.abandon_change(change_id, function()
       M.log()
-    end
-  )
+    end)
+  end)
 end
 
 --------------------------------------------------------------------------------
@@ -365,14 +269,8 @@ local function select_change(opts, cb)
   end, keymap_opts)
 end
 
-local rebase_source_types = {
-  { label = 'Revision (single change)', flag = '-r' },
-  { label = 'Source (subtree - change + descendants)', flag = '-s' },
-  { label = 'Branch (all revisions in branch)', flag = '-b' },
-}
-
 local function prompt_source_type(cb)
-  vim.ui.select(rebase_source_types, {
+  vim.ui.select(jj.rebase_source_types, {
     prompt = 'Rebase source type:',
     format_item = function(item)
       return string.format('%s - %s', item.key, item.label)
@@ -386,26 +284,8 @@ local function prompt_source_type(cb)
   end)
 end
 
-local rebase_destination_types = {
-  {
-    label = 'Destination (onto - default)',
-    flag = '-d',
-    preposition = 'onto'
-  },
-  {
-    label = 'After destination',
-    flag = '-A',
-    preposition = 'after'
-  },
-  {
-    label = 'Before destination',
-    flag = '-B',
-    preposition = 'before'
-  },
-}
-
 local function prompt_destination_type(cb)
-  vim.ui.select(rebase_destination_types, {
+  vim.ui.select(jj.rebase_destination_types, {
     prompt = 'Rebase destination type:',
     format_item = function(item)
       return string.format('%s - %s', item.key, item.label)
@@ -420,63 +300,19 @@ local function prompt_destination_type(cb)
 end
 
 local function execute_rebase(source_ids, source_type, dest_id, dest_type)
-  local args = { "jj", "rebase" }
-
-  -- Add all selected changes as -r arguments
-  for _, change_id in ipairs(source_ids) do
-    table.insert(args, source_type.flag)
-    table.insert(args, change_id)
-  end
-
-  -- Add destination args
-  table.insert(args, dest_type.flag)
-  table.insert(args, dest_id)
-
-  local count = #source_ids
-
-  -- Build confirmation message
-  local ids_preview = count <= 3
-    and table.concat(vim.tbl_map(function(id) return id:sub(1, 8) end, source_ids), ", ")
-    or string.format("%s, ... (%d total)", source_ids[1]:sub(1, 8), count)
-
-  local confirm_msg = string.format(
-    "Rebase %d change%s [%s] %s %s? (y/N): ",
-    count,
-    count == 1 and "" or "s",
-    ids_preview,
-    dest_type.preposition,
-    dest_id:sub(1, 8)
-  )
-
-  vim.ui.input({ prompt = confirm_msg }, function(input)
-    if not input or (input:lower() ~= "y" and input:lower() ~= "yes") then
-      vim.notify("Rebase cancelled", vim.log.levels.INFO)
-      return
-    end
-
-    run_jj_command(args, function()
-      vim.notify(string.format(
-        "Rebased %d change%s %s %s",
-        count,
-        count == 1 and "" or "s",
-        dest_type.preposition,
-        dest_id:sub(1, 8)
-      ), vim.log.levels.INFO)
-      clear_selections()
-      M.log()
-    end, function(result)
-      vim.notify("Rebase failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
-    end)
+  jj.execute_rebase(source_ids, source_type, dest_id, dest_type, function()
+    clear_selections()
+    M.log()
   end)
 end
 
 local function rebase_change()
-  if get_selection_count() > 0 then
-    local source_ids = get_selected_ids()
+  local source_ids = get_selected_ids()
+  if #source_ids > 0 then
 
     with_change_at_cursor(function (dest_id)
       prompt_destination_type(function(dest_type)
-        execute_rebase(source_ids, rebase_source_types[1], dest_id, dest_type)
+        execute_rebase(source_ids, jj.rebase_source_types[1], dest_id, dest_type)
       end)
     end)
   else
@@ -497,11 +333,10 @@ end
 --------------------------------------------------------------------------------
 
 local function describe_and_squash_changes(source_ids, target_id)
-  local source_count = #source_ids
   local all_change_ids = vim.list_extend({}, source_ids)
   table.insert(all_change_ids, target_id)
 
-  jj_get_changes_by_ids(all_change_ids, function(changes)
+  jj.get_changes_by_ids(all_change_ids, function(changes)
     local change_descriptions = {}
     for _, change in ipairs(changes) do
       if vim.trim(change.description) ~= "" then
@@ -517,28 +352,14 @@ local function describe_and_squash_changes(source_ids, target_id)
       filetype = 'jjdescription',
       extra_help_text = string.format(
         "JJ: Squashing %d %s into %s. Enter a description for the combined commit.",
-        source_count,
-        source_count == 1 and "change" or "changes",
-        target_id
+        #source_ids, #source_ids == 1 and "change" or "changes", target_id
       ),
 
       on_submit = function(message)
-        local from_revset = jj_make_revset(source_ids)
-        run_jj_command(
-          { "jj", "squash", "--from", from_revset, "--into", target_id, "-m", message },
-          function()
-            vim.notify(string.format(
-              "Squashed %d %s into %s",
-              source_count, source_count == 1 and "change" or "changes",
-              target_id
-            ), vim.log.levels.INFO)
-            clear_selections()
-            M.log()
-          end,
-          function(result)
-            vim.notify("Squash failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
-          end
-        )
+        jj.execute_squash(source_ids, target_id, message, function()
+          clear_selections()
+          M.log()
+        end)
       end,
 
       on_abort = function()
@@ -550,8 +371,8 @@ end
 
 local function squash_change()
   with_change_at_cursor(function(change_id)
-    if get_selection_count() > 0 then
-      local selected_ids = get_selected_ids()
+    local selected_ids = get_selected_ids()
+    if #selected_ids > 0 then
       describe_and_squash_changes(selected_ids, change_id)
     else
       describe_and_squash_changes({ change_id }, change_id .. "-")
@@ -572,11 +393,6 @@ end
 
 -- Update visual indicators for selections
 local function update_selection_display()
-  if not M.jj_buffer or not vim.api.nvim_buf_is_valid(M.jj_buffer) then
-    return
-  end
-
-  local ns_id = vim.api.nvim_create_namespace("jj_selections")
   vim.api.nvim_buf_clear_namespace(M.jj_buffer, ns_id, 0, -1)
 
   -- Add visual indicators for each selected change
@@ -595,7 +411,7 @@ local function update_selection_display()
   end
 
   -- Update status message
-  local count = get_selection_count()
+  local count = #get_selected_ids()
   if count > 0 then
     vim.notify(string.format("%d change%s selected", count, count == 1 and "" or "s"), vim.log.levels.INFO)
   end
@@ -606,7 +422,7 @@ local function toggle_selection_at_cursor()
   local line = vim.api.nvim_get_current_line()
   local change_id = extract_change_id(line)
 
-  if change_id and #change_id >= 4 then
+  if change_id then
     toggle_selection(change_id)
     update_selection_display()
   else
@@ -644,9 +460,13 @@ local function setup_log_keymaps(buf, original_window)
   -- Change operations
   map("R", M.log, "Refresh log")
   map("d", function() with_change_at_cursor(describe) end, "Describe change")
-  map("n", function() with_change_at_cursor(new_change) end, "New change after this")
+  map("n", function() with_change_at_cursor(function(change_id)
+    jj.new_change(change_id, function()
+      M.log()
+    end)
+  end) end, "New change after this")
   map("a", function() with_change_at_cursor(abandon_change) end, "Abandon change")
-  map("e", function() with_change_at_cursor(edit_change) end, "Edit (check out) change")
+  map("e", function() with_change_at_cursor(jj.edit_change) end, "Edit (check out) change")
   map("r", rebase_change, "Rebase change")
   map("s", squash_change, "Squash change")
   map("S", function() with_change_at_cursor(squash_to_target) end, "Squash into target")
