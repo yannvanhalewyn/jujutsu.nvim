@@ -36,7 +36,7 @@ If you prefer to call setup manually:
 ```lua
 vim.keymap.set("n", "<leader>j", ":JJ<CR>", { desc = "JJ Log" })
 -- Or use via the lua API:
-local jj = require("jj")
+local jj = require("jujutsu-nvim")
 vim.keymap.set("n", "<leader>j", jj.log, { desc = "JJ Log" })
 ```
 

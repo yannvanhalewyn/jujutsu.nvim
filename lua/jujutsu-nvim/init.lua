@@ -730,17 +730,4 @@ function M.run(args_str)
   end)
 end
 
-M.setup = function()
-  vim.api.nvim_create_user_command("JJ", function(opts)
-    if opts.args == "" or opts.args == "log" then
-      M.log()
-    else
-      M.run(opts.args)
-    end
-  end, {
-  nargs = "*",
-  desc = "Run jj commands"
-})
-end
-
 return M
