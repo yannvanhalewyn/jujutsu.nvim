@@ -23,7 +23,7 @@ M.run_command_in_new_terminal_window = function (args, opts)
 
   -- Auto-cleanup on buffer wipeout
   vim.api.nvim_create_autocmd("BufWipeout", {
-    buffer = M.jj_buffer,
+    buffer = buffer,
     once = true,
     callback = opts.on_close
   })
