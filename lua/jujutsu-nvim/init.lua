@@ -195,6 +195,13 @@ end
 
 local jj = require("jujutsu-nvim.jujutsu")
 
+local function new_change(change_id)
+  jj.new_change(change_id, function()
+    vim.notify("Created new change after " .. change_id, vim.log.levels.INFO)
+    M.log()
+  end)
+end
+
 local function describe(change_id)
   jj.get_changes_by_ids({ change_id }, function(changes)
     local description = changes[1].description
@@ -203,6 +210,7 @@ local function describe(change_id)
       filetype = 'jjdescription',
       on_submit = function(new_description)
         jj.describe(change_id, new_description, function()
+          vim.notify("Description updated for " .. change_id, vim.log.levels.INFO)
           M.log()
         end)
       end,
@@ -223,8 +231,16 @@ local function abandon_change(change_id)
       return
     end
     jj.abandon_change(change_id, function()
+      vim.notify("Abandoned change " .. change_id, vim.log.levels.INFO)
       M.log()
     end)
+  end)
+end
+
+local function edit_change(change_id)
+  jj.edit_change(change_id, function()
+    vim.notify("Checked out change " .. change_id, vim.log.levels.INFO)
+    M.log()
   end)
 end
 
@@ -460,13 +476,9 @@ local function setup_log_keymaps(buf)
   -- Change operations
   map("R", M.log, "Refresh log")
   map("d", function() with_change_at_cursor(describe) end, "Describe change")
-  map("n", function() with_change_at_cursor(function(change_id)
-    jj.new_change(change_id, function()
-      M.log()
-    end)
-  end) end, "New change after this")
+  map("n", function() with_change_at_cursor(new_change) end, "New change after this")
   map("a", function() with_change_at_cursor(abandon_change) end, "Abandon change")
-  map("e", function() with_change_at_cursor(jj.edit_change) end, "Edit (check out) change")
+  map("e", function() with_change_at_cursor(edit_change) end, "Edit (check out) change")
   map("r", rebase_change, "Rebase change")
   map("s", squash_change, "Squash change")
   map("S", function() with_change_at_cursor(squash_to_target) end, "Squash into target")

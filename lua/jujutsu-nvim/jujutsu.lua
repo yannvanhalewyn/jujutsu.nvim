@@ -18,43 +18,21 @@ end
 -- Basic Operations
 
 M.new_change = function(change_id, on_success)
-  run_jj_command(
-    { "jj", "new", change_id },
-    function()
-      vim.notify("Created new change after " .. change_id, vim.log.levels.INFO)
-      on_success()
-    end
-  )
+  run_jj_command({ "jj", "new", change_id }, on_success)
 end
 
 M.abandon_change = function(change_id, on_success)
-  run_jj_command(
-    { "jj", "abandon", change_id },
-    function()
-      vim.notify("Abandoned change " .. change_id, vim.log.levels.INFO)
-      if on_success then on_success() end
-    end
-  )
+  run_jj_command({ "jj", "abandon", change_id }, on_success)
 end
 
-M.edit_change = function(change_id)
-  run_jj_command(
-    { "jj", "edit", change_id },
-    function()
-      vim.notify("Checked out change " .. change_id, vim.log.levels.INFO)
-      M.log()
-    end
-  )
+M.edit_change = function(change_id, on_success)
+  run_jj_command({ "jj", "edit", change_id }, on_success)
 end
 
 M.describe = function(change_id, new_description, on_success)
   run_jj_command(
     { "jj", "describe", "-r", change_id, "-m", new_description },
-    function()
-      vim.notify("Description updated for " .. change_id:sub(1, 8), vim.log.levels.INFO)
-      on_success()
-    end
-  )
+    on_success)
 end
 
 --------------------------------------------------------------------------------
