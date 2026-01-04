@@ -15,7 +15,11 @@ A Neovim plugin for working with [Jujutsu](https://github.com/martinvonz/jj) ver
 
 - Neovim >= 0.10.0
 - [jj](https://github.com/martinvonz/jj) (Jujutsu VCS)
-- [difftastic.nvim](https://github.com/clabby/difftastic.nvim) (optional, for diff viewing)
+
+### Optional Dependencies
+
+- [difftastic.nvim](https://github.com/clabby/difftastic.nvim) - For the default "difftastic" diff viewer
+- [diffview.nvim](https://github.com/sindrets/diffview.nvim) - For the "diffview" diff viewer preset
 
 ## Installation
 
@@ -28,6 +32,28 @@ vim.pack.add({
 ```
 
 The plugin will automatically set up the `:JJ` command when loaded.
+
+## Configuration
+
+The plugin can be configured by calling `setup()`. Note that this is optional,
+only necessary if you want to change the default behavior.
+
+```lua
+require("jujutsu-nvim").setup({
+  -- Diff viewer to use when pressing <CR> on a change
+  -- Options: "difftastic", "diffview", "none", or a custom function
+  diff_viewer = "difftastic",  -- default
+})
+```
+
+### Diff Viewer Options
+
+#### Built-in Presets
+
+- **`"difftastic"`** (default) - Opens diffs using [difftastic.nvim](https://github.com/clabby/difftastic.nvim) in a new tab
+- **`"diffview"`** - Opens diffs using [diffview.nvim](https://github.com/sindrets/diffview.nvim)
+- **`"none"`** - Disables the default `<CR>` behavior (useful if you want to add your own via keymaps)
+
 
 ### Manual Setup (if needed)
 

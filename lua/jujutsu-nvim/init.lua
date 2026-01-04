@@ -17,6 +17,55 @@ M.jj_buffer = nil
 vim.api.nvim_set_hl(0, "JJLogChange", { link = "CursorLine" })
 
 --------------------------------------------------------------------------------
+-- Configuration
+--------------------------------------------------------------------------------
+
+-- Default configuration
+local default_config = {
+  -- Diff viewer preset options: "difftastic", "diffview" or "none"
+  diff_preset = "difftastic",
+}
+
+-- Current configuration (merged with user config)
+M.config = vim.deepcopy(default_config)
+
+-- Built-in diff viewer implementations
+local diff_presets = {
+  difftastic = function(change)
+    vim.cmd("tabnew")
+    vim.cmd("Difft " .. change.change_id)
+  end,
+
+  diffview = function(change)
+    vim.cmd(string.format("DiffviewOpen %s", change.commit_sha))
+  end,
+
+  none = function(change)
+    vim.notify("No diff viewer configured", vim.log.levels.INFO)
+  end,
+}
+
+-- Get the configured diff viewer function
+local function get_diff_viewer()
+  local preset = M.config.diff_preset
+
+  local viewer = diff_presets[preset]
+  if viewer then
+    return viewer
+  else
+    vim.notify(
+      string.format("Unknown diff viewer preset: '%s'. Using 'none'.", preset),
+      vim.log.levels.WARN
+    )
+    return diff_presets.none
+  end
+end
+
+function M.setup(user_config)
+  M.config = vim.tbl_deep_extend("force", default_config, user_config or {})
+end
+
+--------------------------------------------------------------------------------
 -- Utils
 local function remove(list, pred)
   local filtered = {}
@@ -493,13 +542,16 @@ local function setup_log_keymaps(buf)
   map("j", "2j", "Move down 2 lines")
   map("k", "2k", "Move up 2 lines")
 
-  -- Open difftastic for change under cursor
+  -- Open diff viewer for change under cursor
   map("<CR>", function()
     with_change_at_cursor(function(change_id)
-      vim.cmd("tabnew")
-      vim.cmd("Difft " .. change_id)
+      local viewer = get_diff_viewer()
+      -- Get change info to pass to custom viewers if needed
+      jj.get_changes_by_ids({ change_id }, function(changes)
+        viewer(changes[1])
+      end)
     end)
-  end, "Open Difft for change")
+  end, "Open diff for change")
 
   -- Change operations
   map("R", M.log, "Refresh log")

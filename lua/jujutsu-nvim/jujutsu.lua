@@ -22,7 +22,7 @@ M.make_revset = function(change_ids)
 end
 
 M.get_changes = function(revset, callback)
-  local template = 'separate(";", change_id.short(), coalesce(description, " ")) ++ "\n---END-CHANGE---\n"'
+  local template = 'separate(";", change_id.short(), commit_id, coalesce(description, " ")) ++ "\n---END-CHANGE---\n"'
 
   run_jj_command(
     { "jj", "log", "--no-graph", "-r", revset, "-T", template },
@@ -34,12 +34,13 @@ M.get_changes = function(revset, callback)
       for change_block in output:gmatch("(.-)\n%-%-%-END%-CHANGE%-%-%-\n") do
         if change_block ~= "" then
           -- Split on first semicolon only (to handle multiline descriptions)
-          local change_id, description = change_block:match("^([^;]*);(.*)$")
+          local change_id, commit_sha, description = change_block:match("^([^;]*);(.*);(.*)$")
           if change_id then
             -- Trim the change_id and preserve description as-is (including newlines)
             change_id = change_id:gsub("^%s*(.-)%s*$", "%1")
             table.insert(changes, {
               change_id = change_id,
+              commit_sha = commit_sha,
               description = description
             })
           end
