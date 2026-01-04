@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+test_repo_dir=./tmp/test-repo
+
+if [[ -d $test_repo_dir ]] then
+  echo "$test_repo_dir exists, deleting"
+  rm -rf $test_repo_dir
+fi
+
+mkdir -p $test_repo_dir
+cd $test_repo_dir
+
+touch README.md
+mkdir src
+touch src/feature.js
+mkdir docs
+touch docs/doc.md
+jj git init --colocate
+jj describe -m "Initial Commit"
+jj bookmark set main # Remove this line to test repos without clear trunk branch
+jj new
+
+# Make feature-base workflow
+jj bookmark set feature-base
+jj new
+
+echo "var a = 'feature step 1'" >> src/feature.js
+jj describe -m "Add feature"
+jj bookmark set feature-step-1
+jj new
+
+echo "var b = 'feature step 2'" >> src/feature.js
+jj describe -m "Add feature step 2"
+jj bookmark set feature-step-2
+
+# Branch off somewhere new
+jj new feature-base
+echo "Some documentation" >> docs/doc.md
+jj describe -m "Add docs"
+jj bookmark set feature-docs
+
+echo "Create a test repo: $test_repo_dir"
