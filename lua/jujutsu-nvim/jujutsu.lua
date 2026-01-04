@@ -108,28 +108,48 @@ end
 -- Rebase
 
 M.rebase_source_types = {
-  { label = 'Revision (single change)', flag = '-r' },
-  { label = 'Source (subtree - change + descendants)', flag = '-s' },
-  { label = 'Branch (all revisions in branch)', flag = '-b' },
+  { key = 'r', label = 'Revision (single change)', flag = '-r' },
+  { key = 's', label = 'Source (subtree - change + descendants)', flag = '-s' },
+  { key = 'b', label = 'Branch (all revisions in branch)', flag = '-b' },
 }
 
 M.rebase_destination_types = {
   {
+    key = 'd',
     label = 'Destination (onto - default)',
     flag = '-d',
     preposition = 'onto'
   },
   {
+    key = 'A',
     label = 'After destination',
     flag = '-A',
     preposition = 'after'
   },
   {
+    key = 'B',
     label = 'Before destination',
     flag = '-B',
     preposition = 'before'
   },
 }
+
+-- Build rebase confirmation message
+M.build_rebase_confirmation_msg = function(source_ids, dest_type, dest_id)
+  local count = #source_ids
+  local ids_preview = count <= 3
+    and table.concat(vim.tbl_map(function(id) return id:sub(1, 8) end, source_ids), ", ")
+    or string.format("%s, ... (%d total)", source_ids[1]:sub(1, 8), count)
+
+  return string.format(
+    "Rebase %d %s [%s] %s %s?",
+    count,
+    count == 1 and "change" or "changes",
+    ids_preview,
+    dest_type.preposition,
+    dest_id:sub(1, 8)
+  )
+end
 
 M.execute_rebase = function(source_ids, source_type, dest_id, dest_type, on_success)
   local args = { "jj", "rebase" }
@@ -146,38 +166,17 @@ M.execute_rebase = function(source_ids, source_type, dest_id, dest_type, on_succ
 
   local count = #source_ids
 
-  -- Build confirmation message
-  local ids_preview = count <= 3
-    and table.concat(vim.tbl_map(function(id) return id:sub(1, 8) end, source_ids), ", ")
-    or string.format("%s, ... (%d total)", source_ids[1]:sub(1, 8), count)
-
-  local confirm_msg = string.format(
-    "Rebase %d change%s [%s] %s %s? (y/N): ",
-    count,
-    count == 1 and "" or "s",
-    ids_preview,
-    dest_type.preposition,
-    dest_id:sub(1, 8)
-  )
-
-  vim.ui.input({ prompt = confirm_msg }, function(input)
-    if not input or (input:lower() ~= "y" and input:lower() ~= "yes") then
-      vim.notify("Rebase cancelled", vim.log.levels.INFO)
-      return
-    end
-
-    run_jj_command(args, function()
-      vim.notify(string.format(
-        "Rebased %d change%s %s %s",
-        count,
-        count == 1 and "" or "s",
-        dest_type.preposition,
-        dest_id:sub(1, 8)
-      ), vim.log.levels.INFO)
-      on_success()
-    end, function(result)
-      vim.notify("Rebase failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
-    end)
+  run_jj_command(args, function()
+    vim.notify(string.format(
+      "Rebased %d change%s %s %s",
+      count,
+      count == 1 and "" or "s",
+      dest_type.preposition,
+      dest_id:sub(1, 8)
+    ), vim.log.levels.INFO)
+    on_success()
+  end, function(result)
+    vim.notify("Rebase failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
   end)
 end
 
