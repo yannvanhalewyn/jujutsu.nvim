@@ -7,6 +7,8 @@
 --   :JJ log           - Open interactive log view
 --   :JJ <any command> - Run any jj command
 
+local jj = require("jujutsu-nvim.jujutsu")
+
 local M = {}
 
 -- Window and buffer tracking
@@ -31,16 +33,24 @@ M.config = vim.deepcopy(default_config)
 
 -- Built-in diff viewer implementations
 local diff_presets = {
-  difftastic = function(change)
+  difftastic = function(changes)
     vim.cmd("tabnew")
-    vim.cmd("Difft " .. change.change_id)
+    local change_ids = vim.tbl_map(function(c)
+      return c.change_id end,
+      changes
+    )
+    vim.cmd("Difft " .. jj.make_revset(change_ids))
   end,
 
-  diffview = function(change)
-    vim.cmd(string.format("DiffviewOpen %s", change.commit_sha))
+  diffview = function(changes)
+    if #changes == 1 then
+      vim.cmd(string.format("DiffviewOpen %s", changes[0].commit_sha))
+    else
+      vim.cmd(string.format("DiffviewOpen %s...%s", changes[0].commit_sha, changes[#changes].commit_sha))
+    end
   end,
 
-  none = function(change)
+  none = function(_)
     vim.notify("No diff viewer configured", vim.log.levels.INFO)
   end,
 }
@@ -243,7 +253,6 @@ end
 -- Basic Operations
 --------------------------------------------------------------------------------
 
-local jj = require("jujutsu-nvim.jujutsu")
 local dialog_window = require("jujutsu-nvim.dialog_window")
 
 local function new_change(change_id)
@@ -409,6 +418,22 @@ local function rebase_change()
 end
 
 --------------------------------------------------------------------------------
+-- Diff operations
+--------------------------------------------------------------------------------
+
+local function open_diff_for_changes()
+  local viewer = get_diff_viewer()
+  local selected_ids = get_selected_ids()
+  if #selected_ids > 0 then
+    jj.get_changes_by_ids(selected_ids, viewer)
+  else
+    with_change_at_cursor(function(change_id)
+      jj.get_changes_by_ids({ change_id }, viewer)
+    end)
+  end
+end
+
+--------------------------------------------------------------------------------
 -- Squash operations
 --------------------------------------------------------------------------------
 
@@ -543,15 +568,7 @@ local function setup_log_keymaps(buf)
   map("k", "2k", "Move up 2 lines")
 
   -- Open diff viewer for change under cursor
-  map("<CR>", function()
-    with_change_at_cursor(function(change_id)
-      local viewer = get_diff_viewer()
-      -- Get change info to pass to custom viewers if needed
-      jj.get_changes_by_ids({ change_id }, function(changes)
-        viewer(changes[1])
-      end)
-    end)
-  end, "Open diff for change")
+  map("<CR>", open_diff_for_changes, "Open diff")
 
   -- Change operations
   map("R", M.log, "Refresh log")
