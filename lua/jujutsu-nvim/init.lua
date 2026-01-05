@@ -750,11 +750,37 @@ local function setup_log_keymaps(buf)
     }))
   end
 
+  -- Navigate to next line with a change ID
+  local function jump_to_next_change()
+    local current_line = vim.api.nvim_win_get_cursor(0)[1]
+    local total_lines = vim.api.nvim_buf_line_count(buf)
+
+    for line_num = current_line + 1, total_lines do
+      local line = vim.api.nvim_buf_get_lines(buf, line_num - 1, line_num, false)[1]
+      if line and extract_change_id(line) then
+        vim.api.nvim_win_set_cursor(0, { line_num, 0 })
+        return
+      end
+    end
+  end
+
+  -- Navigate to previous line with a change ID
+  local function jump_to_prev_change()
+    local current_line = vim.api.nvim_win_get_cursor(0)[1]
+
+    for line_num = current_line - 1, 1, -1 do
+      local line = vim.api.nvim_buf_get_lines(buf, line_num - 1, line_num, false)[1]
+      if line and extract_change_id(line) then
+        vim.api.nvim_win_set_cursor(0, { line_num, 0 })
+        return
+      end
+    end
+  end
 
   -- Navigation
   map("q", close_jj_window, "Close window")
-  map("j", "2j", "Move down 2 lines")
-  map("k", "2k", "Move up 2 lines")
+  map("j", jump_to_next_change, "Jump to next change")
+  map("k", jump_to_prev_change, "Jump to previous change")
 
   -- Open diff viewer for change under cursor
   map("<CR>", open_diff_for_changes, "Open diff")
@@ -822,7 +848,7 @@ function M.run(args_str)
 
   local args = vim.split(args_str, "%s+")
 
-  run_in_jj_window(args, "JJ: " .. args_str:subs(1,6), function(buf)
+  run_in_jj_window(args, "JJ: " .. args_str, function(buf)
     vim.keymap.set("n", "q", ":close<CR>", { buffer = buf, silent = true, desc = "JJ: Close window" })
   end)
 end

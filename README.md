@@ -46,7 +46,7 @@ The plugin will automatically set up the `:JJ` command when loaded.
   "yannvanhalewyn/jujutsu.nvim",
   opts = {
     -- Options: "difftastic", "diffview", "none"
-    diff_viewer = "difftastic",  -- default
+    diff_preset = "difftastic",  -- default
   },
 }
 ```
@@ -58,6 +58,8 @@ Or without options:
   "yannvanhalewyn/jujutsu.nvim",
 }
 ```
+
+**Note**: When using `opts`, lazy.nvim automatically calls `require("jujutsu-nvim").setup(opts)` for you.
 
 ## Configuration
 
