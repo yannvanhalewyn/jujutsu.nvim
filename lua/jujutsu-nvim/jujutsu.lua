@@ -248,13 +248,13 @@ M.rebase_destination_types = {
     preposition = 'onto'
   },
   {
-    key = 'A',
+    key = 'a',
     label = 'After destination',
     flag = '-A',
     preposition = 'after'
   },
   {
-    key = 'B',
+    key = 'b',
     label = 'Before destination',
     flag = '-B',
     preposition = 'before'
