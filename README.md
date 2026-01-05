@@ -140,6 +140,7 @@ jujutsu.nvim provides several bookmark operations:
 | `B` | Bookmark menu | Show all bookmark operations |
 | `d` (in bookmark menu) | Delete bookmark | Delete a bookmark from the change |
 | `r` (in bookmark menu) | Rename bookmark | Rename a bookmark |
+| `p` (in bookmark menu) | Pull bookmark | Fetch and update bookmark from remote |
 
 **Setting/Creating bookmarks (b)**:
 1. Press `b` on a change
@@ -151,6 +152,7 @@ jujutsu.nvim provides several bookmark operations:
 2. Select an operation:
    - `d` - Delete: Choose a bookmark to delete
    - `r` - Rename: Choose a bookmark and enter a new name
+   - `p` - Pull: Fetch from remote and update bookmark to point to remote version
 
 **Pushing bookmarks**:
 - Use `p` to push the change's bookmarks to remote

@@ -388,6 +388,7 @@ local function bookmark_menu(change_id)
     local options = {
       { key = 'd', label = 'Delete bookmark', value = 'delete' },
       { key = 'r', label = 'Rename bookmark', value = 'rename' },
+      { key = 'p', label = 'Pull bookmark from remote', value = 'pull' },
     }
 
     dialog_window.show_floating_options({
@@ -439,6 +440,22 @@ local function bookmark_menu(change_id)
                 vim.notify("Renamed bookmark '" .. bookmark .. "' to '" .. new_name .. "'", vim.log.levels.INFO)
                 M.log()
               end)
+            end)
+          end)
+        elseif option.value == 'pull' then
+          -- Select which bookmark to pull
+          vim.ui.select(bookmarks, {
+            prompt = "Pull bookmark:",
+            format_item = function(item) return item end
+          }, function(bookmark)
+            if not bookmark then
+              vim.notify("Pull cancelled", vim.log.levels.INFO)
+              return
+            end
+
+            jj.pull_bookmark(bookmark, function()
+              vim.notify("Pulled bookmark '" .. bookmark .. "' from remote", vim.log.levels.INFO)
+              M.log()
             end)
           end)
         end
