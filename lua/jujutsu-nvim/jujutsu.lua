@@ -95,17 +95,12 @@ M.get_bookmarks = function(callback)
   run_jj_command(
     { "jj", "bookmark", "list", "-T", "name ++ '\n'"},
     function(result)
+      -- Format: "bookmark_name: change_id\n"
       local output = result.stdout or ""
-      local bookmarks = {}
-      -- Parse bookmark list output
-      -- Format: "bookmark_name: change_id"
-      for _, bookmark_name in ipairs(vim.split(output, "\n")) do
-        if bookmark_name then
-          -- bookmark = bookmark_name:gsub("^%s*(.-)%s*$", "%1") -- trim
-          table.insert(bookmarks, bookmark_name)
-        end
-      end
-
+      local bookmarks = vim.tbl_filter(
+        function(line) return line end,
+        vim.split(output, "\n")
+      )
       callback(bookmarks)
     end,
     function(result)

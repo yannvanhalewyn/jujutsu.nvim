@@ -59,8 +59,6 @@ Or without options:
 }
 ```
 
-**Note**: When using `opts`, lazy.nvim automatically calls `require("jujutsu-nvim").setup(opts)` for you.
-
 ## Configuration
 
 The plugin can be configured by calling `setup()`. Note that this is optional,

@@ -8,6 +8,7 @@
 --   :JJ <any command> - Run any jj command
 
 local jj = require("jujutsu-nvim.jujutsu")
+local u = require("jujutsu-nvim.utils")
 
 local M = {}
 
@@ -73,18 +74,6 @@ end
 
 function M.setup(user_config)
   M.config = vim.tbl_deep_extend("force", default_config, user_config or {})
-end
-
---------------------------------------------------------------------------------
--- Utils
-local function remove(list, pred)
-  local filtered = {}
-  for _, v in ipairs(list) do
-    if not pred(v) then
-      table.insert(filtered, v)
-    end
-  end
-  return filtered
 end
 
 --------------------------------------------------------------------------------
@@ -214,7 +203,7 @@ local function open_editor_buffer(opts)
     vim.api.nvim_buf_delete(buf, { force = true })
     if opts.on_submit then
       -- Filter out lines starting with "JJ:"
-      local filtered_lines = remove(content, function(x) return x:match("^JJ:") end)
+      local filtered_lines = u.remove(content, function(x) return x:match("^JJ:") end)
       local user_content = table.concat(filtered_lines, "\n")
       opts.on_submit(user_content)
     end
@@ -247,6 +236,10 @@ local function open_editor_buffer(opts)
     once = true,
     callback = function() vim.fn.delete(temp_file) end
   })
+
+  if opts.on_ready then
+    opts.on_ready(win, buf)
+  end
 end
 
 --------------------------------------------------------------------------------
@@ -278,6 +271,11 @@ local function describe(change_id)
     open_editor_buffer({
       content = description,
       filetype = 'jjdescription',
+      on_ready = function(_, _)
+        if u.is_blank(description) then
+          vim.cmd.startinsert()
+        end
+      end,
       on_submit = function(new_description)
         jj.describe(change_id, new_description, function()
           vim.notify("Description updated for " .. change_id, vim.log.levels.INFO)
