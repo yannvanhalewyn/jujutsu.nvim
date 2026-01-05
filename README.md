@@ -60,6 +60,97 @@ Or to use diffview.nvim:
 }
 ```
 
+## Usage
+
+### Commands
+
+- `:JJ` or `:JJ log` - Open the interactive log view
+- `:JJ <command>` - Run any jj command (e.g., `:JJ status`, `:JJ diff`)
+
+### Log View Keybindings
+
+#### Navigation
+- `j` / `k` - Move down/up across changes
+- `q` - Close window
+- `<CR>` - Open diffviewer change under cursor
+
+#### Change Operations
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `R` | Refresh | Refresh the log view |
+| `l` | Set revset | Opens the log on a new custom revset |
+| `u` | Undo | Undo the last operation |
+| `d` | Describe | Edit the description of the change at cursor |
+| `n` | New change | Create new change after change at cursor |
+| `N` | New change | Create a new change with a few more options |
+| `a` | Abandon | Abandon the change at cursor |
+| `e` | Edit | Edit (check out) the change at cursor |
+| `r` | Rebase | Rebase change onto another change. Opens interactive menu |
+| `s` | Squash | Squash change into its parent |
+| `S` | Squash to target | Squash change into another target. |
+| `b` | Bookmark | Set or create a bookmark on the change |
+| `B` | Bookmark | More bookmark options, like delete and rename |
+| `p` | Push | Push the change (and its bookmarks) to remote |
+| `P` | Push (create) | Push the change and create bookmarks on remote if they don't exist |
+
+#### Multi-Selection
+
+Some operations can be performed on a selection of changes. Here's how to manage selections:
+
+- `m` - Toggle selection for the change at cursor
+- `c` - Clear all selections
+
+Now various operations can be performed on the selected changes:
+
+| Operation | Action | Description |
+|-----------|--------|-------------|
+| `n` | New |  Creates new change after all selected changes |
+| `a` | Abandon | Abandons all selected changes |
+| `r` | Rebase |  Rebases all selected changes onto change at cursor |
+| `s` | Squash | Squashes all selected changes into change at cursor |
+| `<CR>` | Diff | Opens diff for all selected changes (only if there are no gaps) |
+| `p` | Push | Pushes bookmarks for all selected changes |
+| `P` | Push create | Pushes bookmarks all selected changes (with `--allow-new`) |
+
+**Note**: Operations that don't support multi-selection (like `d` for describe, `e` for edit) always operate on the change under the cursor, ignoring selections.
+
+#### Bookmarks
+
+jujutsu.nvim provides several bookmark operations:
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `b` | Set/Create bookmark | Select from existing bookmarks or create new one |
+| `B` | Bookmark menu | Show all bookmark operations |
+| `d` (in bookmark menu) | Delete bookmark | Delete a bookmark from the change |
+| `r` (in bookmark menu) | Rename bookmark | Rename a bookmark |
+| `p` (in bookmark menu) | Pull bookmark | Fetch and update bookmark from remote |
+
+**Setting/Creating bookmarks (b)**:
+1. Press `b` on a change
+2. Select an existing bookmark to move it to this change, or select "[Create new bookmark]"
+3. If creating, enter the new bookmark name
+
+**Bookmark menu (B)**:
+1. Press `B` on a change with bookmarks
+2. Select an operation:
+   - `d` - Delete: Choose a bookmark to delete
+   - `r` - Rename: Choose a bookmark and enter a new name
+   - `p` - Pull: Fetch from remote and update bookmark to point to remote version
+
+**Pushing bookmarks**:
+- Use `p` to push the change's bookmarks to remote
+- Use `P` to push and create the bookmarks on remote with `--allow-new` flag
+
+### Example Workflow
+
+1. Open the log: `:JJ log` or `<leader>j`
+2. Navigate to a change and press `<CR>` to view the diff
+3. Press `d` to edit the description
+4. Select multiple changes with `m` and rebase them with `r`
+5. Press `q` to close the log view
+
 ## Configuration
 
 The plugin can be configured by calling `setup()`. Note that this is optional,
@@ -153,97 +244,6 @@ But you can achieve similar results by calling into the Lua API directly:
 local jj = require("jujutsu-nvim")
 vim.keymap.set("n", "<leader>j", jj.log, { desc = "JJ Log" })
 ```
-
-## Usage
-
-### Commands
-
-- `:JJ` or `:JJ log` - Open the interactive log view
-- `:JJ <command>` - Run any jj command (e.g., `:JJ status`, `:JJ diff`)
-
-### Log View Keybindings
-
-#### Navigation
-- `j` / `k` - Move down/up across changes
-- `q` - Close window
-- `<CR>` - Open diffviewer change under cursor
-
-#### Change Operations
-
-| Key | Action | Description |
-|-----|--------|-------------|
-| `R` | Refresh | Refresh the log view |
-| `l` | Set revset | Opens the log on a new custom revset |
-| `u` | Undo | Undo the last operation |
-| `d` | Describe | Edit the description of the change at cursor |
-| `n` | New change | Create new change after change at cursor |
-| `N` | New change | Create a new change with a few more options |
-| `a` | Abandon | Abandon the change at cursor |
-| `e` | Edit | Edit (check out) the change at cursor |
-| `r` | Rebase | Rebase change onto another change. Opens interactive menu |
-| `s` | Squash | Squash change into its parent |
-| `S` | Squash to target | Squash change into another target. |
-| `b` | Bookmark | Set or create a bookmark on the change |
-| `B` | Bookmark | More bookmark options, like delete and rename |
-| `p` | Push | Push the change (and its bookmarks) to remote |
-| `P` | Push (create) | Push the change and create bookmarks on remote if they don't exist |
-
-#### Multi-Selection
-
-Some operations can be performed on a selection of changes. Here's how to manage selections:
-
-- `m` - Toggle selection for the change at cursor
-- `c` - Clear all selections
-
-Now various operations can be performed on the selected changes:
-
-| Operation | Action | Description |
-|-----------|--------|-------------|
-| `n` | New |  Creates new change after all selected changes |
-| `a` | Abandon | Abandons all selected changes |
-| `r` | Rebase |  Rebases all selected changes onto change at cursor |
-| `s` | Squash | Squashes all selected changes into change at cursor |
-| `<CR>` | Diff | Opens diff for all selected changes (only if there are no gaps) |
-| `p` | Push | Pushes bookmarks for all selected changes |
-| `P` | Push create | Pushes bookmarks all selected changes (with `--allow-new`) |
-
-**Note**: Operations that don't support multi-selection (like `d` for describe, `e` for edit) always operate on the change under the cursor, ignoring selections.
-
-#### Bookmarks
-
-jujutsu.nvim provides several bookmark operations:
-
-| Key | Action | Description |
-|-----|--------|-------------|
-| `b` | Set/Create bookmark | Select from existing bookmarks or create new one |
-| `B` | Bookmark menu | Show all bookmark operations |
-| `d` (in bookmark menu) | Delete bookmark | Delete a bookmark from the change |
-| `r` (in bookmark menu) | Rename bookmark | Rename a bookmark |
-| `p` (in bookmark menu) | Pull bookmark | Fetch and update bookmark from remote |
-
-**Setting/Creating bookmarks (b)**:
-1. Press `b` on a change
-2. Select an existing bookmark to move it to this change, or select "[Create new bookmark]"
-3. If creating, enter the new bookmark name
-
-**Bookmark menu (B)**:
-1. Press `B` on a change with bookmarks
-2. Select an operation:
-   - `d` - Delete: Choose a bookmark to delete
-   - `r` - Rename: Choose a bookmark and enter a new name
-   - `p` - Pull: Fetch from remote and update bookmark to point to remote version
-
-**Pushing bookmarks**:
-- Use `p` to push the change's bookmarks to remote
-- Use `P` to push and create the bookmarks on remote with `--allow-new` flag
-
-### Example Workflow
-
-1. Open the log: `:JJ log` or `<leader>j`
-2. Navigate to a change and press `<CR>` to view the diff
-3. Press `d` to edit the description
-4. Select multiple changes with `m` and rebase them with `r`
-5. Press `q` to close the log view
 
 ## Development
 
