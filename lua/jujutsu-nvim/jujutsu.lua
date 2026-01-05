@@ -68,8 +68,8 @@ end
 --------------------------------------------------------------------------------
 -- Basic Operations
 
-M.new_change = function(change_id, on_success)
-  run_jj_command({ "jj", "new", change_id }, on_success)
+M.new_change = function(revset, on_success)
+  run_jj_command({ "jj", "new", revset }, on_success)
 end
 
 M.abandon_change = function(change_id, on_success)

@@ -255,11 +255,21 @@ end
 
 local dialog_window = require("jujutsu-nvim.dialog_window")
 
-local function new_change(change_id)
-  jj.new_change(change_id, function()
-    vim.notify("Created new change after " .. change_id, vim.log.levels.INFO)
-    M.log()
-  end)
+local function new_change()
+  local selected_ids = get_selected_ids()
+  if #selected_ids > 0 then
+    jj.new_change(jj.make_revset(selected_ids), function()
+      vim.notify("Created new change on " .. table.concat(selected_ids, ", "), vim.log.levels.INFO)
+      M.log()
+    end)
+  else
+    with_change_at_cursor(function(change_id)
+      jj.new_change({ change_id }, function()
+        vim.notify("Created new change after " .. change_id, vim.log.levels.INFO)
+        M.log()
+      end)
+    end)
+  end
 end
 
 local function describe(change_id)
@@ -573,7 +583,7 @@ local function setup_log_keymaps(buf)
   -- Change operations
   map("R", M.log, "Refresh log")
   map("d", function() with_change_at_cursor(describe) end, "Describe change")
-  map("n", function() with_change_at_cursor(new_change) end, "New change after this")
+  map("n", new_change, "New change after this")
   map("a", function() with_change_at_cursor(abandon_change) end, "Abandon change")
   map("e", function() with_change_at_cursor(edit_change) end, "Edit (check out) change")
   map("r", rebase_change, "Rebase change")
