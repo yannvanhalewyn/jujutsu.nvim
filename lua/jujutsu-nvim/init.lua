@@ -696,7 +696,7 @@ local function close_jj_window()
     if vim.api.nvim_buf_is_valid(buf) then
       local name = vim.api.nvim_buf_get_name(buf)
       -- Match both term:// buffers and renamed [JJ] buffers
-      if name:match("term://.*jj%s+%-%-no%-pager") or name:match("%[JJ") or name:match("JJ Log") or name:match("JJ:") then
+      if name:match("term://.*jj.*%-%-no%-pager") or name:match("%[JJ") or name:match("JJ Log") or name:match("JJ:") then
         pcall(vim.api.nvim_buf_delete, buf, { force = true })
       end
     end
@@ -707,8 +707,9 @@ local function close_jj_window()
 end
 
 local function run_in_jj_window(args, title, setup_keymaps_fn)
-  close_jj_window()
   terminal_buffer.run_command_in_new_terminal_window(args, {
+    buf = M.jj_buffer,
+    window = M.jj_window,
     title = title,
     on_ready = function(window, buffer)
       M.jj_buffer = buffer
