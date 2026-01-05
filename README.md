@@ -44,18 +44,19 @@ The plugin will automatically set up the `:JJ` command when loaded.
 ```lua
 {
   "yannvanhalewyn/jujutsu.nvim",
-  opts = {
-    -- Options: "difftastic", "diffview", "none"
-    diff_preset = "difftastic",  -- default
-  },
 }
 ```
 
-Or without options:
+Or to use diffview.nvim:
 
 ```lua
 {
   "yannvanhalewyn/jujutsu.nvim",
+  config = function()
+    require("jujutsu-nvim").setup({
+      diff_preset = "diffview",
+    })
+  end,
 }
 ```
 
