@@ -39,6 +39,26 @@ vim.pack.add({
 
 The plugin will automatically set up the `:JJ` command when loaded.
 
+### Using lazy.nvim
+
+```lua
+{
+  "yannvanhalewyn/jujutsu.nvim",
+  opts = {
+    -- Options: "difftastic", "diffview", "none"
+    diff_viewer = "difftastic",  -- default
+  },
+}
+```
+
+Or without options:
+
+```lua
+{
+  "yannvanhalewyn/jujutsu.nvim",
+}
+```
+
 ## Configuration
 
 The plugin can be configured by calling `setup()`. Note that this is optional,
