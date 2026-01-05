@@ -82,6 +82,12 @@ Squash multiple changes together, with their descriptions automatically combined
 
 <!-- VIDEO PLACEHOLDER: Squash and multi-select flow demo -->
 
+#### Bookmark management
+
+Manage your bookmarks, create, set, delete, rename and push them to the remote
+
+<!-- VIDEO PLACEHOLDER: Squash and multi-select flow demo -->
+
 ### Commands
 
 - `:JJ` or `:JJ log` - Open the interactive log view
