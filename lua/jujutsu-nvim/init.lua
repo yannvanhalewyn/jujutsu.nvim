@@ -140,7 +140,7 @@ end
 
 -- Extracts the change ID of the change at cursor, and when valid calls the
 -- operation with it.
-local function with_change_at_cursor(operation)
+M.with_change_at_cursor = function(operation)
   local line = vim.api.nvim_get_current_line()
   local change_id = jj.extract_change_id(line)
 
@@ -178,7 +178,7 @@ local function new_change()
       M.log()
     end)
   else
-    with_change_at_cursor(function(change_id)
+    M.with_change_at_cursor(function(change_id)
       jj.new_change(change_id, function()
         vim.notify("Created new change after " .. change_id, vim.log.levels.INFO)
         M.log()
@@ -230,7 +230,7 @@ local function abandon_changes()
         vim.notify("Abandon cancelled", vim.log.levels.INFO)
       end)
   else
-    with_change_at_cursor(function(change_id)
+    M.with_change_at_cursor(function(change_id)
       dialog_window.confirm(
         string.format("Abandon change %s?", change_id:sub(1, 8)),
         function()
@@ -407,7 +407,7 @@ local function push_bookmarks(opts)
       M.log()
     end)
   else
-    with_change_at_cursor(function(change_id)
+    M.with_change_at_cursor(function(change_id)
       jj.push_bookmarks_for_changes(
         change_id,
         { create = opts.create },
@@ -433,7 +433,7 @@ local function select_change(opts, cb)
   local keymap_opts = { buffer = M.jj_buffer, silent = true }
 
   vim.keymap.set("n", "<CR>", function()
-    with_change_at_cursor(function(change_id)
+    M.with_change_at_cursor(function(change_id)
       print("CHANGE AT CURSOR", change_id)
       vim.keymap.del("n", "<CR>", { buffer = M.jj_buffer })
       vim.keymap.del("n", "<Esc>", { buffer = M.jj_buffer })
@@ -509,13 +509,13 @@ local function rebase_change()
   local source_ids = get_selected_ids()
   if #source_ids > 0 then
 
-    with_change_at_cursor(function (dest_id)
+    M.with_change_at_cursor(function (dest_id)
       prompt_destination_type(function(dest_type)
         execute_rebase(source_ids, jj.rebase_source_types[1], dest_id, dest_type)
       end)
     end)
   else
-    with_change_at_cursor(function(source_id)
+    M.with_change_at_cursor(function(source_id)
       prompt_source_type(function(source_type)
         select_change({ prompt = "Select change to rebase onto" }, function(dest_id)
           prompt_destination_type(function(dest_type)
@@ -537,7 +537,7 @@ local function open_diff_for_changes()
   if #selected_ids > 0 then
     jj.get_changes_by_ids(selected_ids, viewer)
   else
-    with_change_at_cursor(function(change_id)
+    M.with_change_at_cursor(function(change_id)
       jj.get_changes_by_ids({ change_id }, viewer)
     end)
   end
@@ -585,7 +585,7 @@ local function describe_and_squash_changes(source_ids, target_id)
 end
 
 local function squash_change()
-  with_change_at_cursor(function(change_id)
+  M.with_change_at_cursor(function(change_id)
     local selected_ids = get_selected_ids()
     if #selected_ids > 0 then
       describe_and_squash_changes(selected_ids, change_id)
@@ -734,15 +734,15 @@ local actions = {
   ["undo"] = undo,
   ["set_revset"] = prompt_and_set_revset,
   ["open_diff"] = open_diff_for_changes,
-  ["describe"] = function() with_change_at_cursor(describe) end,
+  ["describe"] = function() M.with_change_at_cursor(describe) end,
   ["new_change"] = new_change,
   ["abandon_changes"] = abandon_changes,
-  ["edit_change"] = function() with_change_at_cursor(edit_change) end,
+  ["edit_change"] = function() M.with_change_at_cursor(edit_change) end,
   ["rebase_change"] = rebase_change,
   ["squash_change"] = squash_change,
-  ["squash_to_target"] = function() with_change_at_cursor(squash_to_target) end,
-  ["bookmark_change"] = function() with_change_at_cursor(bookmark_change) end,
-  ["bookmark_menu"] = function() with_change_at_cursor(bookmark_menu) end,
+  ["squash_to_target"] = function() M.with_change_at_cursor(squash_to_target) end,
+  ["bookmark_change"] = function() M.with_change_at_cursor(bookmark_change) end,
+  ["bookmark_menu"] = function() M.with_change_at_cursor(bookmark_menu) end,
   ["push_bookmarks"] = function() push_bookmarks({}) end,
   ["push_bookmarks_and_create"] = function() push_bookmarks({ create = true }) end,
   ["toggle_change"] = toggle_selection_at_cursor,

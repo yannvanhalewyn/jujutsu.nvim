@@ -80,6 +80,63 @@ require("jujutsu-nvim").setup({
 - **`"diffview"`** - Opens diffs using [diffview.nvim](https://github.com/sindrets/diffview.nvim)
 - **`"none"`** - Disables the default `<CR>` behavior (useful if you want to add your own via keymaps)
 
+### Custom Keymaps
+
+You can customize keybindings in the log view by providing a `keymap` table in the setup configuration. Each key can map to either:
+- A **string** representing a built-in action name
+- A **function** to run custom code
+
+#### Example: Custom Keymaps
+
+```lua
+require("jujutsu-nvim").setup({
+  keymap = {
+    -- Map to built-in actions (string)
+    q = "quit",
+    R = "refresh",
+    d = "describe",
+
+    -- Map to custom functions
+    ["<C-d>"] = function()
+      jj.with_change_at_cursor(function(change_id)
+        vim.notify("Custom diff command: " .. change_id)
+      end)
+    end,
+
+    -- Override default behavior
+    ["<CR>"] = function()
+      vim.notify("You pressed Enter on a change!", vim.log.levels.INFO)
+    end,
+  }
+})
+```
+
+#### Available Built-in Actions
+
+The following action names can be used as string values in your keymap:
+
+| Action Name | Description |
+|-------------|-------------|
+| `quit` | Close the log window |
+| `jump_to_next_change` | Navigate to next change |
+| `jump_to_prev_change` | Navigate to previous change |
+| `refresh` | Refresh the log view |
+| `undo` | Undo the last operation |
+| `set_revset` | Open log with custom revset |
+| `open_diff` | Open diff viewer for change |
+| `describe` | Edit change description |
+| `new_change` | Create new change |
+| `abandon_changes` | Abandon change(s) |
+| `edit_change` | Check out change |
+| `rebase_change` | Rebase change |
+| `squash_change` | Squash change |
+| `squash_to_target` | Squash to specific target |
+| `bookmark_change` | Set/create bookmark |
+| `bookmark_menu` | Show bookmark operations |
+| `push_bookmarks` | Push bookmarks |
+| `push_bookmarks_and_create` | Push bookmarks with --allow-new |
+| `toggle_change` | Toggle multi-selection |
+| `clear_selections` | Clear all selections |
 
 ### Recommended setup
 
