@@ -179,7 +179,7 @@ local function new_change()
     end)
   else
     with_change_at_cursor(function(change_id)
-      jj.new_change({ change_id }, function()
+      jj.new_change(change_id, function()
         vim.notify("Created new change after " .. change_id, vim.log.levels.INFO)
         M.log()
       end)
