@@ -1,6 +1,6 @@
 # jujutsu.nvim
 
-A Neovim plugin for working with [Jujutsu](https://github.com/martinvonz/jj) version control.
+A Neovim plugin for working with [Jujutsu](https://github.com/martinvonz/jj) version control. This plugin is aimed to cover the most common use cases and focus mostly on smooth and fast UX.
 
 ## Features
 
@@ -10,6 +10,8 @@ A Neovim plugin for working with [Jujutsu](https://github.com/martinvonz/jj) ver
 - **Squash Operations**: Squash single or multiple changes with combined descriptions
 - **Multi-Selection**: Select multiple changes for batch operations
 - **Difftastic Integration**: View diffs using [difftastic](https://github.com/Wilfred/difftastic)
+- **Diffview Integration**: View diffs using [diffview](https://github.com/sindrets/diffview.nvim)
+- **Extensible**: Via own keybindings and Lua API
 
 ## Requirements
 
@@ -40,8 +42,7 @@ only necessary if you want to change the default behavior.
 
 ```lua
 require("jujutsu-nvim").setup({
-  -- Diff viewer to use when pressing <CR> on a change
-  -- Options: "difftastic", "diffview", "none", or a custom function
+  -- Options: "difftastic", "diffview", "none"
   diff_viewer = "difftastic",  -- default
 })
 ```
@@ -55,13 +56,18 @@ require("jujutsu-nvim").setup({
 - **`"none"`** - Disables the default `<CR>` behavior (useful if you want to add your own via keymaps)
 
 
-### Manual Setup (if needed)
+### Recommended setup
 
-If you prefer to call setup manually:
+It's recommended to bind a leader key to run the `:JJ` command:
 
 ```lua
 vim.keymap.set("n", "<leader>j", ":JJ<CR>", { desc = "JJ Log" })
--- Or use via the lua API:
+```
+
+
+But you can achieve similar results by calling into the Lua API directly:
+
+```lua
 local jj = require("jujutsu-nvim")
 vim.keymap.set("n", "<leader>j", jj.log, { desc = "JJ Log" })
 ```
@@ -76,26 +82,69 @@ vim.keymap.set("n", "<leader>j", jj.log, { desc = "JJ Log" })
 ### Log View Keybindings
 
 #### Navigation
-- `j` / `k` - Move down/up by 2 lines
+- `j` / `k` - Move down/up across changes
 - `q` - Close window
-- `<CR>` - Open difftastic view for change under cursor
+- `<CR>` - Open diffviewer change under cursor
 
 #### Change Operations
-- `R` - Refresh log
-- `d` - Describe (edit description)
-- `n` - Create new change after current
-- `N` - Create new with options
-- `a` - Abandon change
-- `e` - Edit (check out) change
-- `r` - Rebase change onto another change
-- `s` - Squash change into it's parent
-- `S` - Squash change into another target
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `R` | Refresh | Refresh the log view |
+| `u` | Undo | Undo the last operation |
+| `d` | Describe | Edit the description of the change at cursor |
+| `n` | New change | Create new change after change at cursor |
+| `N` | New change | Create a new change with a few more options |
+| `a` | Abandon | Abandon the change at cursor |
+| `e` | Edit | Edit (check out) the change at cursor |
+| `r` | Rebase | Rebase change onto another change. Opens interactive menu |
+| `s` | Squash | Squash change into its parent |
+| `S` | Squash to target | Squash change into another target. |
+| `b` | Bookmark | Set or create a bookmark on the change |
+| `B` | Bookmark | More bookmark options, like delete and rename |
+| `p` | Push | Push the change (and its bookmarks) to remote |
+| `P` | Push (create) | Push the change and create bookmarks on remote if they don't exist |
 
 #### Multi-Selection
-- `m` - Toggle selection for current change
+
+Some operations can be performed on a selection of changes. Here's how to manage selections:
+
+- `m` - Toggle selection for the change at cursor
 - `c` - Clear all selections
 
-When multiple changes are selected, operations like rebase and squash will act on all selected changes.
+Now various operations can be performed on the selected changes:
+
+| Operation | Action | Description |
+|-----------|--------|-------------|
+| `n` | New |  Creates new change after all selected changes |
+| `a` | Abandon | Abandons all selected changes |
+| `r` | Rebase |  Rebases all selected changes onto change at cursor |
+| `s` | Squash | Squashes all selected changes into change at cursor |
+| `<CR>` | Diff | Opens diff for all selected changes (only if there are no gaps) |
+| `p` | Push | Pushes bookamrks for all selected changes |
+| `P` | Push create | Pushes bookmarks all selected changes (with `--allow-new`) |
+
+**Note**: Operations that don't support multi-selection (like `d` for describe, `e` for edit) always operate on the change under the cursor, ignoring selections.
+
+#### Bookmarks
+
+jujutsu.nvim provides several bookmark operations:
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `b` | Set/Create bookmark | Select from existing bookmarks or create new one |
+| `B` | Bookmark menu | Show all bookmark operations (coming soon) |
+| `d` (in bookmark menu) | Delete bookmark | Delete a bookmark (coming soon) |
+| `r` (in bookmark menu) | Rename bookmark | Rename a bookmark (coming soon) |
+
+**Current workflow**:
+1. Press `b` on a change
+2. Select an existing bookmark to move it to this change, or select "[Create new bookmark]"
+3. If creating, enter the new bookmark name
+
+**Pushing bookmarks**:
+- Use `p` to push the change's bookmarks to remote
+- Use `P` to push and create the bookmarks on remote with `--allow-new` flag
 
 ### Example Workflow
 
@@ -135,5 +184,5 @@ MIT
 
 ## Acknowledgments
 
-- Built for use with [Jujutsu](https://github.com/martinvonz/jj)
-- Inspired by fugitive.vim and other Git plugins
+- Built for use with [Jujutsu](https://github.com/martinvonz/jj), an inspiring VCS
+- Inspired by LazyGit
