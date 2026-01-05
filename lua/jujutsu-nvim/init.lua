@@ -744,7 +744,10 @@ local function setup_log_keymaps(buf)
 
   -- Helper to create keymap with description
   local function map(key, action, desc)
-    vim.keymap.set("n", key, action, vim.tbl_extend("force", opts, { desc = "JJ: " .. desc }))
+    vim.keymap.set("n", key, action, vim.tbl_extend("force", opts, {
+      desc = "JJ: " .. desc,
+      nowait = true
+    }))
   end
 
 
