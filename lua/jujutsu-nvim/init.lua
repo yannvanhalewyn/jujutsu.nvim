@@ -30,6 +30,28 @@ vim.api.nvim_set_hl(0, "JJLogChange", { link = "CursorLine" })
 local default_config = {
   -- Diff viewer preset options: "difftastic", "diffview" or "none"
   diff_preset = "difftastic",
+  keymap = {
+    q = "quit",
+    j = "jump_to_next_change",
+    k = "jump_to_prev_change",
+    R = "refresh",
+    u = "undo",
+    l = "set_revset",
+    ["<CR>"] = "open_diff",
+    d = "describe",
+    n = "new_change",
+    a = "abandon_changes",
+    e = "edit_change",
+    r = "rebase_change",
+    s = "squash_change",
+    S = "squash_to_target",
+    b = "bookmark_change",
+    B = "bookmark_menu",
+    p = "push_bookmarks",
+    P = "push_bookmarks_and_create",
+    m = "toggle_change",
+    c = "clear_selections",
+  }
 }
 
 -- Current configuration (merged with user config)
@@ -48,9 +70,9 @@ local diff_presets = {
 
   diffview = function(changes)
     if #changes == 1 then
-      vim.cmd(string.format("DiffviewOpen %s", changes[0].commit_sha))
+      vim.cmd(string.format("DiffviewOpen %s^!", changes[1].commit_sha))
     else
-      vim.cmd(string.format("DiffviewOpen %s...%s", changes[0].commit_sha, changes[#changes].commit_sha))
+      vim.cmd(string.format("DiffviewOpen %s...%s", changes[1].commit_sha, changes[#changes].commit_sha))
     end
   end,
 
@@ -800,49 +822,6 @@ local function close_jj_window()
   M.jj_window = nil
 end
 
-local function setup_log_keymaps(buf)
-  local opts = { buffer = buf, silent = true }
-
-  -- Helper to create keymap with description
-  local function map(key, action, desc)
-    vim.keymap.set("n", key, action, vim.tbl_extend("force", opts, {
-      desc = "JJ: " .. desc,
-      nowait = true
-    }))
-  end
-
-  -- Navigation
-  map("q", close_jj_window, "Close window")
-  map("j", jump_to_next_change, "Jump to next change")
-  map("k", jump_to_prev_change, "Jump to previous change")
-
-  -- Open diff viewer for change under cursor
-  map("<CR>", open_diff_for_changes, "Open diff")
-
-  -- Change operations
-  map("R", M.log, "Refresh log")
-  map("d", function() with_change_at_cursor(describe) end, "Describe change")
-  map("n", new_change, "New change after this")
-  map("a", abandon_changes, "Abandon change")
-  map("e", function() with_change_at_cursor(edit_change) end, "Edit (check out) change")
-  map("r", prompt_and_set_revset, "Set custom revset")
-  map("s", squash_change, "Squash change")
-  map("u", undo, "Squash change")
-  map("S", function() with_change_at_cursor(squash_to_target) end, "Squash into target")
-  map("b", function() with_change_at_cursor(bookmark_change) end, "Bookmark change")
-  map("B", function() with_change_at_cursor(bookmark_menu) end, "Bookmark menu")
-  map("p", function() push_bookmarks({}) end, "Push change")
-  map("P", function() push_bookmarks({ create = true }) end, "Push change (create on remote)")
-
-  -- Multi-select
-  map("m", toggle_selection_at_cursor, "Toggle selection")
-  map("c", function()
-    clear_selections()
-    update_selection_display()
-    vim.notify("Cleared all selections", vim.log.levels.INFO)
-  end, "Clear selections")
-end
-
 local function run_in_jj_window(args, title, setup_keymaps_fn)
   close_jj_window()
   terminal_buffer.run_command_in_new_terminal_window(args, {
@@ -863,6 +842,33 @@ end
 -- Public API
 --------------------------------------------------------------------------------
 
+local actions = {
+  ["quit"] = close_jj_window,
+  ["jump_to_next_change"] = jump_to_next_change,
+  ["jump_to_prev_change"] = jump_to_prev_change,
+  ["refresh"] = M.log,
+  ["undo"] = undo,
+  ["set_revset"] = prompt_and_set_revset,
+  ["open_diff"] = open_diff_for_changes,
+  ["describe"] = function() with_change_at_cursor(describe) end,
+  ["new_change"] = new_change,
+  ["abandon_changes"] = abandon_changes,
+  ["edit_change"] = function() with_change_at_cursor(edit_change) end,
+  ["rebase_change"] = rebase_change,
+  ["squash_change"] = squash_change,
+  ["squash_to_target"] = function() with_change_at_cursor(squash_to_target) end,
+  ["bookmark_change"] = function() with_change_at_cursor(bookmark_change) end,
+  ["bookmark_menu"] = function() with_change_at_cursor(bookmark_menu) end,
+  ["push_bookmarks"] = function() push_bookmarks({}) end,
+  ["push_bookmarks_and_create"] = function() push_bookmarks({ create = true }) end,
+  ["toggle_change"] = toggle_selection_at_cursor,
+  ["clear_selections"] = function()
+    clear_selections()
+    update_selection_display()
+    vim.notify("Cleared all selections", vim.log.levels.INFO)
+  end,
+}
+
 -- Open jj log
 function M.log(args)
   args = args or {}
@@ -875,7 +881,15 @@ function M.log(args)
   end
 
   vim.list_extend(log_args, args)
-  run_in_jj_window(log_args, "JJ Log", setup_log_keymaps)
+  run_in_jj_window(log_args, "JJ Log", function(buf)
+    -- Bind keymaps
+    for key, action in pairs(M.config.keymap) do
+      vim.keymap.set(
+        "n", key, actions[action] or action,
+        { buffer = buf, silent = true, nowait = true }
+      )
+    end
+  end)
 end
 
 -- Run any jj command interactively
@@ -902,6 +916,7 @@ M.set_custom_revset = function(revset)
     M.custom_revset = revset
     vim.notify("Revset set to: " .. revset, vim.log.levels.INFO)
   end
+  clear_selections()
   M.log()
 end
 

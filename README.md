@@ -116,6 +116,7 @@ vim.keymap.set("n", "<leader>j", jj.log, { desc = "JJ Log" })
 | Key | Action | Description |
 |-----|--------|-------------|
 | `R` | Refresh | Refresh the log view |
+| `l` | Set revset | Opens the log on a new custom revset |
 | `u` | Undo | Undo the last operation |
 | `d` | Describe | Edit the description of the change at cursor |
 | `n` | New change | Create new change after change at cursor |
