@@ -4,6 +4,8 @@ A Neovim plugin for working with [Jujutsu](https://github.com/martinvonz/jj) ver
 
 ![jujutsu-nivm-log-trim](https://github.com/user-attachments/assets/c868c4bc-e4dc-450f-ab8e-60b22e0e915c)
 
+*Note*: this plugin is in early development, APIs and configuration are subject to change. I'd love to hear feedback, issues and feature requests!
+
 ## Features
 
 - **Interactive Log View**: Browse your jujutsu history with syntax highlighting and keybindings
@@ -95,28 +97,56 @@ https://github.com/user-attachments/assets/8cbf2ad0-86ac-435a-ad1a-38c245c3bdff
 
 ### Log View Keybindings
 
-#### Basic operations
+Press `?` in the log view to see all available keybindings organized by category.
+
+#### Help
 
 | Key | Action | Description |
 |-----|--------|-------------|
-| `j` / `k` | Move down/up across changes | |
-| `q` | Close window | |
-| `<CR>` | Open diffviewer change under cursor | |
+| `?` | Show help | Display all keybindings organized by category |
+
+#### Navigation
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `j` | Jump to next change | Move to the next change in the log |
+| `k` | Jump to previous change | Move to the previous change in the log |
+| `<CR>` | Open diff viewer | Open diff viewer for change under cursor |
+
+#### Log Window
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `q` | Close window | Close the log window |
 | `R` | Refresh | Refresh the log view |
-| `l` | Set revset | Opens the log on a new custom revset |
-| `u` | Undo | Undo the last operation |
+| `l` | Set custom revset | Opens the log on a new custom revset |
+
+#### Basic Operations
+
+| Key | Action | Description |
+|-----|--------|-------------|
 | `d` | Describe | Edit the description of the change at cursor |
-| `n` | New change | Create new change after change at cursor |
-| `N` | New change | Create a new change with a few more options |
-| `a` | Abandon | Abandon the change at cursor |
-| `e` | Edit | Edit (check out) the change at cursor |
-| `r` | Rebase | Rebase change onto another change. Opens interactive menu |
-| `s` | Squash | Squash change into its parent |
-| `S` | Squash to target | Squash change into another target. |
-| `b` | Bookmark | Set or create a bookmark on the change |
-| `B` | Bookmark | More bookmark options, like delete and rename |
-| `p` | Push | Push the change (and its bookmarks) to remote |
-| `P` | Push (create) | Push the change and create bookmarks on remote if they don't exist |
+| `n` | Create new change | Create new change after change at cursor |
+| `a` | Abandon change(s) | Abandon the change at cursor (or selected changes) |
+| `e` | Edit (checkout) change | Edit (check out) the change at cursor |
+| `u` | Undo last operation | Undo the last operation |
+
+#### Advanced Operations
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `s` | Squash into parent | Squash change into its parent |
+| `S` | Squash to target | Squash change into another target |
+| `r` | Rebase change | Rebase change onto another change. Opens interactive menu |
+
+#### Bookmarks
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `b` | Set/create bookmark | Set or create a bookmark on the change |
+| `B` | Bookmark operations menu | More bookmark options, like delete and rename |
+| `p` | Push bookmarks | Push the change (and its bookmarks) to remote |
+| `P` | Push and create bookmarks | Push the change and create bookmarks on remote if they don't exist |
 
 #### Multi-Selection
 
@@ -197,8 +227,9 @@ require("jujutsu-nvim").setup({
 
 ### Custom Keymaps
 
-You can customize keybindings in the log view by providing a `keymap` table in the setup configuration. Each key can map to either:
-- A **string** representing a built-in action name
+You can customize keybindings in the log view by providing a `keymap` table in the setup configuration. Each key can map to:
+- A **string** representing a built-in action name (legacy format)
+- A **table** with `cmd` and `desc` fields (recommended format)
 - A **function** to run custom code
 
 #### Example: Custom Keymaps
@@ -206,32 +237,37 @@ You can customize keybindings in the log view by providing a `keymap` table in t
 ```lua
 require("jujutsu-nvim").setup({
   keymap = {
-    -- Map to built-in actions (string)
-    q = "quit",
-    R = "refresh",
-    d = "describe",
+    -- Structured format (recommended)
+    q = { cmd = "quit", desc = "Close window" },
+    R = { cmd = "refresh", desc = "Refresh log" },
+    d = { cmd = "describe", desc = "Edit description" },
 
     -- Map to custom functions
-    ["<C-d>"] = function()
-      jj.with_change_at_cursor(function(change_id)
-        vim.notify("Custom diff command: " .. change_id)
-      end)
-    end,
+    ["<C-d>"] = {
+      cmd = function()
+        local jj = require("jujutsu-nvim")
+        jj.with_change_at_cursor(function(change_id)
+          vim.notify("Custom diff command: " .. change_id)
+        end)
+      end,
+      desc = "Custom diff"
+    },
 
-    -- Override default behavior
-    ["<CR>"] = function()
-      vim.notify("You pressed Enter on a change!", vim.log.levels.INFO)
-    end,
+    -- Legacy string format still supported
+    ["<CR>"] = "open_diff",
   }
 })
 ```
 
+Custom keybindings (those using functions) will automatically appear in a "Custom" group when you press `?` to view the help window.
+
 #### Available Built-in Actions
 
-The following action names can be used as string values in your keymap:
+The following action names can be used as string values in your keymap (or as the `cmd` field in the new format):
 
 | Action Name | Description |
 |-------------|-------------|
+| `show_help` | Show keybindings help window |
 | `quit` | Close the log window |
 | `jump_to_next_change` | Navigate to next change |
 | `jump_to_prev_change` | Navigate to previous change |

@@ -10,6 +10,7 @@
 local capture_buffer = require("jujutsu-nvim.capture_buffer")
 local jj = require("jujutsu-nvim.jujutsu")
 local u = require("jujutsu-nvim.utils")
+local help_window = require("jujutsu-nvim.help_window")
 
 local M = {}
 
@@ -32,26 +33,27 @@ local default_config = {
   -- Diff viewer preset options: "difftastic", "diffview" or "none"
   diff_preset = "difftastic",
   keymap = {
-    q = "quit",
-    j = "jump_to_next_change",
-    k = "jump_to_prev_change",
-    R = "refresh",
-    u = "undo",
-    l = "set_revset",
-    ["<CR>"] = "open_diff",
-    d = "describe",
-    n = "new_change",
-    a = "abandon_changes",
-    e = "edit_change",
-    r = "rebase_change",
-    s = "squash_change",
-    S = "squash_to_target",
-    b = "bookmark_change",
-    B = "bookmark_menu",
-    p = "push_bookmarks",
-    P = "push_bookmarks_and_create",
-    m = "toggle_change",
-    c = "clear_selections",
+    ["?"] = { cmd = "show_help", desc = "Show keybindings help" },
+    j = { cmd = "jump_to_next_change", desc = "Jump to next change" },
+    k = { cmd = "jump_to_prev_change", desc = "Jump to previous change" },
+    q = { cmd = "quit", desc = "Close window" },
+    R = { cmd = "refresh", desc = "Refresh log view" },
+    ["<CR>"] = { cmd = "open_diff", desc = "Open diff viewer" },
+    l = { cmd = "set_revset", desc = "Set custom revset" },
+    d = { cmd = "describe", desc = "Edit description" },
+    n = { cmd = "new_change", desc = "Create new change" },
+    a = { cmd = "abandon_changes", desc = "Abandon change(s)" },
+    e = { cmd = "edit_change", desc = "Edit (checkout) change" },
+    u = { cmd = "undo", desc = "Undo last operation" },
+    r = { cmd = "rebase_change", desc = "Rebase change" },
+    s = { cmd = "squash_change", desc = "Squash into parent" },
+    S = { cmd = "squash_to_target", desc = "Squash to target" },
+    b = { cmd = "bookmark_change", desc = "Set/create bookmark" },
+    B = { cmd = "bookmark_menu", desc = "Bookmark operations menu" },
+    p = { cmd = "push_bookmarks", desc = "Push bookmarks" },
+    P = { cmd = "push_bookmarks_and_create", desc = "Push and create bookmarks" },
+    m = { cmd = "toggle_change", desc = "Toggle selection" },
+    c = { cmd = "clear_selections", desc = "Clear all selections" },
   }
 }
 
@@ -607,6 +609,8 @@ local function squash_to_target(change_id)
   end)
 end
 
+
+
 --------------------------------------------------------------------------------
 -- Selection UI
 --------------------------------------------------------------------------------
@@ -734,6 +738,7 @@ end
 --------------------------------------------------------------------------------
 
 local actions = {
+  ["show_help"] = function() help_window.show(M.config.keymap) end,
   ["quit"] = close_jj_window,
   ["jump_to_next_change"] = jump_to_next_change,
   ["jump_to_prev_change"] = jump_to_prev_change,
@@ -778,10 +783,22 @@ function M.log(args)
   vim.list_extend(log_args, args)
   run_in_jj_window(log_args, "JJ Log", function(buf)
     -- Bind keymaps
-    for key, action in pairs(M.config.keymap) do
+    for key, binding in pairs(M.config.keymap) do
+      -- Support both old format (string) and new format (table)
+      local cmd, desc
+      if type(binding) == "string" then
+        -- Old format: key = "action_name"
+        cmd = actions[binding] or binding
+        desc = "JJ: " .. binding
+      else
+        -- New format: key = { cmd = "action_name", desc = "...", display_group = "..." }
+        cmd = actions[binding.cmd] or binding.cmd
+        desc = "JJ: " .. binding.desc
+      end
+
       vim.keymap.set(
-        "n", key, actions[action] or action,
-        { buffer = buf, silent = true, nowait = true }
+        "n", key, cmd,
+        { buffer = buf, silent = true, nowait = true, desc = desc }
       )
     end
   end)
