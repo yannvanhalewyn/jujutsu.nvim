@@ -218,7 +218,6 @@ local function abandon_changes()
     dialog_window.confirm(
       prompt,
       function()
-        print("revset", vim.inspect(changes))
         jj.abandon_changes(jj.make_revset(changes), function()
           vim.notify(success_msg)
           clear_selections()
@@ -441,7 +440,6 @@ local function select_change(opts, cb)
 
   vim.keymap.set("n", "<CR>", function()
     M.with_change_at_cursor(function(change_id)
-      print("CHANGE AT CURSOR", change_id)
       vim.keymap.del("n", "<CR>", { buffer = M.jj_buffer })
       vim.keymap.del("n", "<Esc>", { buffer = M.jj_buffer })
       cb(change_id)
