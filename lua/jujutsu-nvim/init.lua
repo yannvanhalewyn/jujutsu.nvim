@@ -151,19 +151,6 @@ M.with_change_at_cursor = function(operation)
   end
 end
 
-local function prompt_and_set_revset()
-  vim.ui.input({
-    prompt = "Custom revset (empty to reset): ",
-    default = M.custom_revset or ""
-  }, function(input)
-    if input == nil then
-      vim.notify("Revset input cancelled", vim.log.levels.INFO)
-      return
-    end
-    M.set_custom_revset(input)
-  end)
-end
-
 --------------------------------------------------------------------------------
 -- Basic Operations
 --------------------------------------------------------------------------------
@@ -262,6 +249,19 @@ local function undo()
   jj.undo(nil, function()
     vim.notify("Undid latest operation", vim.log.levels.INFO)
     M.log()
+  end)
+end
+
+local function prompt_and_set_revset()
+  vim.ui.input({
+    prompt = "Custom revset (empty to reset): ",
+    default = ""
+  }, function(input)
+    if input == nil then
+      vim.notify("Revset input cancelled", vim.log.levels.INFO)
+      return
+    end
+    M.set_custom_revset(input)
   end)
 end
 
