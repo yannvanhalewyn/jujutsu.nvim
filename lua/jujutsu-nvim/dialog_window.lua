@@ -1,5 +1,7 @@
 local M = {}
 
+local popup_window = require("jujutsu-nvim.popup_window")
+
 -- Define highlight group for prompt keys (yellow/orange)
 vim.api.nvim_set_hl(0, "JJPromptKey", { fg = "#FFA500", bold = true })
 
@@ -22,112 +24,36 @@ M.show_floating_options = function(opts)
   end
 
   table.insert(lines, "")
-  local key_highlights = {}  -- Track where to highlight keys
+  local highlights = {}  -- Track where to highlight keys
   for _, option in ipairs(options) do
     local line = string.format("    %s  %s", option.key:upper(), option.label)
     table.insert(lines, line)
     -- Track position of key for highlighting (accounting for padding)
     local line_idx = #lines - 1  -- 0-based index
-    table.insert(key_highlights, { line = line_idx, col_start = 4, col_end = 4 + #option.key })
+    table.insert(highlights, { 
+      line = line_idx, 
+      col_start = 4, 
+      col_end = 4 + #option.key,
+      hl_group = "JJPromptKey"
+    })
   end
 
-  -- Add help text
-  table.insert(lines, "")
-  table.insert(lines, "    <Esc> or q to cancel")
-
-  -- Calculate window size (accounting for padding)
-  local width = 0
-  for _, line in ipairs(lines) do
-    width = math.max(width, vim.fn.strdisplaywidth(line))
-  end
-  width = math.min(width + 4, math.floor(vim.o.columns * 0.8))
-  local height = #lines
-
-  -- Create buffer
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.bo[buf].modifiable = false
-  vim.bo[buf].bufhidden = 'wipe'
-
-  -- Calculate window position (centered)
-  local row = math.floor((vim.o.lines - height) / 2)
-  local col = math.floor((vim.o.columns - width) / 2)
-
-  -- Create window
-  local win = vim.api.nvim_open_win(buf, true, {
-    relative = 'editor',
-    row = row,
-    col = col,
-    width = width,
-    height = height,
-    style = 'minimal',
-    border = 'rounded',
-    title = ' JJ ',
-    title_pos = 'center',
-  })
-
-  -- Hide cursor completely
-  vim.api.nvim_win_set_option(win, 'cursorline', false)
-  vim.api.nvim_win_set_option(win, 'cursorcolumn', false)
-
-  -- Store original guicursor to restore later
-  local original_guicursor = vim.o.guicursor
-
-  -- Multiple approaches to hide cursor for maximum compatibility:
-  -- 1. Set cursor highlight to reverse video (makes it invisible on most backgrounds)
-  local original_cursor_hl = vim.api.nvim_get_hl(0, { name = 'Cursor' })
-  local original_lcursor_hl = vim.api.nvim_get_hl(0, { name = 'lCursor' })
-  vim.api.nvim_set_hl(0, 'Cursor', { reverse = false, blend = 100 })
-  vim.api.nvim_set_hl(0, 'lCursor', { reverse = false, blend = 100 })
-
-  -- 2. Hide guicursor
-  vim.o.guicursor = 'a:hor1-Cursor/lCursor'
-
-  -- Apply highlighting to keys
-  for _, hl in ipairs(key_highlights) do
-    vim.api.nvim_buf_add_highlight(buf, -1, 'JJPromptKey', hl.line, hl.col_start, hl.col_end)
-  end
-
-  -- Apply highlighting to help text
-  local help_line = #lines - 2
-  vim.api.nvim_buf_add_highlight(buf, -1, 'Comment', help_line, 0, -1)
-
-  -- Cleanup function
-  local function close_popup()
-    if vim.api.nvim_win_is_valid(win) then
-      vim.api.nvim_win_close(win, true)
-    end
-    -- Restore cursor visibility
-    vim.o.guicursor = original_guicursor
-    vim.api.nvim_set_hl(0, 'Cursor', original_cursor_hl)
-    vim.api.nvim_set_hl(0, 'lCursor', original_lcursor_hl)
-  end
-
-  -- Cancel handler
-  local function cancel()
-    close_popup()
-    if opts.on_cancel then
-      opts.on_cancel()
-    end
-  end
-
-  -- Set up keymaps for each option key
+  -- Build extra keymaps for option selection
+  local extra_keymaps = {}
   for _, option in pairs(options) do
-    vim.keymap.set('n', option.key, function()
-      close_popup()
+    extra_keymaps[option.key] = function()
+      popup.close()
       opts.on_select(option)
-    end, { buffer = buf, silent = true })
+    end
   end
 
-  -- Escape to cancel
-  vim.keymap.set('n', '<Esc>', cancel, { buffer = buf, silent = true })
-  vim.keymap.set('n', 'q', cancel, { buffer = buf, silent = true })
-
-  -- Auto-close on buffer leave
-  vim.api.nvim_create_autocmd('BufLeave', {
-    buffer = buf,
-    once = true,
-    callback = cancel
+  -- Create popup window
+  local popup = popup_window.create({
+    lines = lines,
+    highlights = highlights,
+    help_text = "    <Esc> or q to cancel",
+    on_close = opts.on_cancel,
+    extra_keymaps = extra_keymaps,
   })
 end
 
