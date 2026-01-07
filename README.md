@@ -212,8 +212,25 @@ only necessary if you want to change the default behavior.
 
 ```lua
 require("jujutsu-nvim").setup({
-  -- Options: "difftastic", "diffview", "none"
-  diff_viewer = "difftastic",  -- default
+  -- Diff viewer: "difftastic", "diffview", "none"
+  diff_preset = "difftastic",  -- default
+  
+  -- Help window position: "center", "bottom_right"
+  help_position = "center",  -- default
+})
+```
+
+### Configuration Options
+
+#### Help Window Position
+
+The help window (opened with `?`) can be positioned in different locations:
+- **`"center"`** (default) - Centers the help window on screen
+- **`"bottom_right"`** - Positions the help window in the bottom right corner
+
+```lua
+require("jujutsu-nvim").setup({
+  help_position = "bottom_right",
 })
 ```
 

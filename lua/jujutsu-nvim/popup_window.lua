@@ -1,10 +1,11 @@
 local M = {}
 
--- Creates a centered floating popup window with common styling
+-- Creates a floating popup window with common styling
 -- @param opts table with:
 --   - lines: table - array of strings to display in the window
 --   - highlights: table - array of {line, col_start, col_end, hl_group} for syntax highlighting
 --   - title: string - window title (default: " JJ ")
+--   - position: string - "center" or "bottom_right" (default: "center")
 --   - on_close: function - callback when window closes (optional)
 --   - extra_keymaps: table - additional keymaps like { key = function() end } (optional)
 --   - help_text: string - help text to show at bottom (default: "<Esc> or q to close")
@@ -13,6 +14,7 @@ M.create = function(opts)
   local lines = opts.lines or {}
   local highlights = opts.highlights or {}
   local title = opts.title or " JJ "
+  local position = opts.position or "center"
   local on_close = opts.on_close
   local extra_keymaps = opts.extra_keymaps or {}
   local help_text = opts.help_text or "    <Esc> or q to close"
@@ -38,9 +40,17 @@ M.create = function(opts)
   width = math.min(width + 4, math.floor(vim.o.columns * 0.8))
   local height = #lines
 
-  -- Center the window
-  local row = math.floor((vim.o.lines - height) / 2)
-  local col = math.floor((vim.o.columns - width) / 2)
+  -- Calculate window position
+  local row, col
+  if position == "bottom_right" then
+    -- Position in bottom right corner with some padding
+    row = vim.o.lines - height - 3  -- 3 lines from bottom (for cmdline + padding)
+    col = vim.o.columns - width - 2  -- 2 columns from right edge
+  else
+    -- Center the window (default)
+    row = math.floor((vim.o.lines - height) / 2)
+    col = math.floor((vim.o.columns - width) / 2)
+  end
 
   -- Create window
   local win = vim.api.nvim_open_win(buf, true, {

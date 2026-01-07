@@ -32,6 +32,8 @@ vim.api.nvim_set_hl(0, "JJLogChange", { link = "CursorLine" })
 local default_config = {
   -- Diff viewer preset options: "difftastic", "diffview" or "none"
   diff_preset = "difftastic",
+  -- Help window position: "center" or "bottom_right"
+  help_position = "center",
   keymap = {
     ["?"] = { cmd = "show_help", desc = "Show keybindings help" },
     j = { cmd = "jump_to_next_change", desc = "Jump to next change" },
@@ -738,7 +740,7 @@ end
 --------------------------------------------------------------------------------
 
 local actions = {
-  ["show_help"] = function() help_window.show(M.config.keymap) end,
+  ["show_help"] = function() help_window.show(M.config.keymap, M.config.help_position) end,
   ["quit"] = close_jj_window,
   ["jump_to_next_change"] = jump_to_next_change,
   ["jump_to_prev_change"] = jump_to_prev_change,

@@ -45,7 +45,8 @@ local action_help_info = {
 }
 
 ---@param keymap table - The selected keymap configuration
-M.show = function(keymap)
+---@param position string - Window position: "center" or "bottom_right"
+M.show = function(keymap, position)
   -- Group keybinds using action_help_info metadata
   local grouped_keybinds = {}
   for key, binding in pairs(keymap) do
@@ -121,6 +122,7 @@ M.show = function(keymap)
     lines = lines,
     highlights = highlights,
     title = " JJ Help ",
+    position = position
   })
 end
 
