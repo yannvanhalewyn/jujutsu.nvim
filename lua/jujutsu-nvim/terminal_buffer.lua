@@ -1,9 +1,11 @@
 local M = {}
 
 --- @class TerminalWindowOpts
+--- @field split_mode "reuse"|"vsplit"|"hsplit"|nil How to create/reuse window
 --- @field buf number? Existing buffer to replace (if window is reused)
 --- @field window number? Existing window to reuse
 --- @field title string? Buffer name to display (defaults to "[JJ]")
+--- @field on_exit fun(exit_code: number)? Callback invoked when the command completes
 --- @field on_close function? Callback invoked when the buffer is wiped out
 --- @field on_ready fun(window: number, buffer: number)? Callback invoked when buffer is ready
 
@@ -25,22 +27,41 @@ M.run_command_in_terminal_window = function (args, opts)
 
   if window and vim.api.nvim_win_is_valid(window) then
     -- Reuse existing window - replace buffer with new terminal buffer
-    -- Focus the window first
+    -- Save current window to restore focus later
+    local current_win = vim.api.nvim_get_current_win()
+    
+    -- Focus the window temporarily
     vim.api.nvim_set_current_win(window)
 
-    -- Create new terminal buffer (this replaces the current buffer in the window)
-    vim.cmd("edit term://" .. vim.fn.fnameescape(shell_cmd))
-    local new_buffer = vim.api.nvim_get_current_buf()
-
-    -- Delete old buffer after switching (avoids closing the window)
-    if buffer and vim.api.nvim_buf_is_valid(buffer) and buffer ~= new_buffer then
-      vim.api.nvim_buf_delete(buffer, { force = true })
+    -- Create a new empty buffer
+    vim.cmd("enew")
+    buffer = vim.api.nvim_get_current_buf()
+    
+    -- Start terminal in the new buffer using the shell command
+    vim.fn.termopen(shell_cmd)
+    
+    -- Restore focus to original window after a brief delay
+    -- This ensures the terminal buffer has time to initialize
+    if current_win ~= window and vim.api.nvim_win_is_valid(current_win) then
+      vim.schedule(function()
+        if vim.api.nvim_win_is_valid(current_win) then
+          vim.api.nvim_set_current_win(current_win)
+        end
+      end)
+    end
+  else
+    -- Create new split based on split_mode
+    local split_cmd
+    if opts.split_mode == "vsplit" then
+      split_cmd = "vsplit"
+    elseif opts.split_mode == "hsplit" then
+      split_cmd = "botright split"
+    else
+      -- Default to hsplit for backward compatibility
+      split_cmd = "botright split"
     end
 
-    buffer = new_buffer
-  else
-    -- Create a new terminal buffer and run command
-    vim.cmd("botright split term://" .. vim.fn.fnameescape(shell_cmd))
+    vim.cmd(split_cmd .. " term://" .. vim.fn.fnameescape(shell_cmd))
     window = vim.api.nvim_get_current_win()
     buffer = vim.api.nvim_get_current_buf()
   end
@@ -49,11 +70,27 @@ M.run_command_in_terminal_window = function (args, opts)
   vim.bo[buffer].buflisted = false
   pcall(vim.api.nvim_buf_set_name, buffer, opts.title or "[JJ]")
 
-  vim.api.nvim_create_autocmd("BufWipeout", {
-    buffer = buffer,
-    once = true,
-    callback = opts.on_close
-  })
+  -- TermClose fires when the terminal job exits
+  if opts.on_exit then
+    vim.api.nvim_create_autocmd("TermClose", {
+      buffer = buffer,
+      once = true,
+      callback = function()
+        -- Extract exit code from v:event.status
+        local exit_code = vim.v.event.status or 0
+        opts.on_exit(exit_code)
+      end
+    })
+  end
+
+  -- BufWipeout fires when the buffer is closed/wiped
+  if opts.on_close then
+    vim.api.nvim_create_autocmd("BufWipeout", {
+      buffer = buffer,
+      once = true,
+      callback = opts.on_close
+    })
+  end
 
   if opts.on_ready then
     opts.on_ready(window, buffer)

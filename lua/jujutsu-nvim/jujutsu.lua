@@ -1,5 +1,7 @@
 local M = {}
 
+local terminal_buffer = require("jujutsu-nvim.terminal_buffer")
+
 --- @class JJChange
 --- @field change_id string Short change ID
 --- @field commit_sha string Full commit SHA
@@ -125,7 +127,28 @@ M.abandon_changes = function(revset, on_success)
 end
 
 M.absorb_change = function(revset, on_success)
-  run_jj_command({ "jj", "absorb", "--from", revset}, on_success)
+  terminal_buffer.run_command_in_terminal_window(
+    { "absorb", "--from", revset },
+    {
+      split_mode = "vsplit",
+      title = "[JJ Absorb]",
+      on_ready = function(window, buffer)
+        -- Add 'q' to close the output window
+        vim.keymap.set("n", "q", function()
+          vim.api.nvim_win_close(window, true)
+        end, { buffer = buffer, silent = true, desc = "JJ: Close absorb output" })
+      end,
+      on_exit = function(exit_code)
+        -- Command completed, refresh the log after a brief delay
+        -- This ensures we're outside the TermClose event context
+        vim.schedule(function()
+          if on_success then
+            on_success(exit_code)
+          end
+        end)
+      end
+    }
+  )
 end
 
 M.edit_change = function(change_id, on_success)

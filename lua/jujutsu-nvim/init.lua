@@ -277,8 +277,8 @@ end
 
 local function absorb_changes()
   M.with_change_at_cursor(function(change_id)
-    jj.absorb_change(change_id,  function()
-      vim.notify("Absorbed change " .. change_id, vim.log.levels.INFO)
+    jj.absorb_change(change_id, function()
+      -- Refresh log after closing the absorb output window
       M.log()
     end)
   end)
