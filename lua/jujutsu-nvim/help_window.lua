@@ -27,8 +27,9 @@ local action_help_info = {
 
   describe = { group = "basic_operations", order = 1 },
   new_change = { group = "basic_operations", order = 2 },
-  abandon_changes = { group = "basic_operations", order = 3 },
-  edit_change = { group = "basic_operations", order = 4 },
+  edit_change = { group = "basic_operations", order = 3 },
+  abandon_changes = { group = "basic_operations", order = 4 },
+  absorb_changes = { group = "basic_operations", order = 5 },
   undo = { group = "basic_operations", order = 5 },
 
   rebase_change = { group = "advanced_operations", order = 1 },

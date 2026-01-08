@@ -124,6 +124,10 @@ M.abandon_changes = function(revset, on_success)
   run_jj_command({ "jj", "abandon", revset }, on_success)
 end
 
+M.absorb_change = function(revset, on_success)
+  run_jj_command({ "jj", "absorb", "--from", revset}, on_success)
+end
+
 M.edit_change = function(change_id, on_success)
   run_jj_command({ "jj", "edit", change_id }, on_success)
 end

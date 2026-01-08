@@ -55,6 +55,7 @@ local default_config = {
     d = { cmd = "describe", desc = "Edit description" },
     n = { cmd = "new_change", desc = "Create new change" },
     a = { cmd = "abandon_changes", desc = "Abandon change(s)" },
+    A = { cmd = "absorb_changes", desc = "Absorb change(s)" },
     e = { cmd = "edit_change", desc = "Edit (checkout) change" },
     u = { cmd = "undo", desc = "Undo last operation" },
     r = { cmd = "rebase_change", desc = "Rebase change" },
@@ -272,6 +273,15 @@ local function abandon_changes()
       )
     end)
   end
+end
+
+local function absorb_changes()
+  M.with_change_at_cursor(function(change_id)
+    jj.absorb_change(change_id,  function()
+      vim.notify("Absorbed change " .. change_id, vim.log.levels.INFO)
+      M.log()
+    end)
+  end)
 end
 
 local function edit_change(change_id)
@@ -760,6 +770,7 @@ local actions = {
   ["describe"] = function() M.with_change_at_cursor(describe) end,
   ["new_change"] = new_change,
   ["abandon_changes"] = abandon_changes,
+  ["absorb_changes"] = absorb_changes,
   ["edit_change"] = function() M.with_change_at_cursor(edit_change) end,
   ["rebase_change"] = rebase_change,
   ["squash_change"] = squash_change,

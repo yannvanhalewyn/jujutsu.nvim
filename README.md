@@ -128,6 +128,7 @@ Press `?` in the log view to see all available keybindings organized by category
 | `d` | Describe | Edit the description of the change at cursor |
 | `n` | Create new change | Create new change after change at cursor |
 | `a` | Abandon change(s) | Abandon the change at cursor (or selected changes) |
+| `A` | Absorb change | Absorb the change at cursor |
 | `e` | Edit (checkout) change | Edit (check out) the change at cursor |
 | `u` | Undo last operation | Undo the last operation |
 
