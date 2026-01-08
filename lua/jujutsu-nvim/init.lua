@@ -137,7 +137,7 @@ local function get_selected_ids()
 end
 
 --------------------------------------------------------------------------------
--- Extracting changes from log output
+-- Interacting with the log buffer
 --------------------------------------------------------------------------------
 
 --- Extracts the change ID of the change at cursor, and when valid calls the
@@ -152,6 +152,38 @@ M.with_change_at_cursor = function(operation)
   else
     vim.notify("Could not find change ID on current line", vim.log.levels.WARN)
   end
+end
+
+--- @class SelectChangeOpts
+--- @field prompt string? Optional custom prompt text displayed at the bottom
+
+--- Prompts the user to select a change from the log buffer and hit <CR> (or
+--- <ESC> to cancel). When user makes a selection it calls the callback
+--- function with the selected change_id
+--- @param opts SelectChangeOpts Options for the selection prompt
+--- @param cb fun(change_id: string) Callback function that receives the selected change ID
+local function select_change(opts, cb)
+  vim.notify(
+    (opts.prompt or "Select destination change")
+    .. " (navigate with j/k, <CR> to select, <Esc> to cancel)",
+    vim.log.levels.INFO
+  )
+
+  local keymap_opts = { buffer = M.state.log_buffer, silent = true }
+
+  vim.keymap.set("n", "<CR>", function()
+    M.with_change_at_cursor(function(change_id)
+      vim.keymap.del("n", "<CR>", { buffer = M.state.log_buffer })
+      vim.keymap.del("n", "<Esc>", { buffer = M.state.log_buffer })
+      cb(change_id)
+    end)
+  end, keymap_opts)
+
+  vim.keymap.set("n", "<Esc>", function()
+    vim.keymap.del("n", "<CR>", { buffer = M.state.log_buffer })
+    vim.keymap.del("n", "<Esc>", { buffer = M.state.log_buffer })
+    vim.notify("Selection cancelled", vim.log.levels.INFO)
+  end, keymap_opts)
 end
 
 --------------------------------------------------------------------------------
@@ -448,30 +480,6 @@ end
 --------------------------------------------------------------------------------
 -- Rebase operations
 --------------------------------------------------------------------------------
-
-local function select_change(opts, cb)
-  vim.notify(
-    (opts.prompt or "Select destination change")
-    .. " (navigate with j/k, <CR> to select, <Esc> to cancel)",
-    vim.log.levels.INFO
-  )
-
-  local keymap_opts = { buffer = M.state.log_buffer, silent = true }
-
-  vim.keymap.set("n", "<CR>", function()
-    M.with_change_at_cursor(function(change_id)
-      vim.keymap.del("n", "<CR>", { buffer = M.state.log_buffer })
-      vim.keymap.del("n", "<Esc>", { buffer = M.state.log_buffer })
-      cb(change_id)
-    end)
-  end, keymap_opts)
-
-  vim.keymap.set("n", "<Esc>", function()
-    vim.keymap.del("n", "<CR>", { buffer = M.state.log_buffer })
-    vim.keymap.del("n", "<Esc>", { buffer = M.state.log_buffer })
-    vim.notify("Selection cancelled", vim.log.levels.INFO)
-  end, keymap_opts)
-end
 
 local function prompt_source_type(cb)
   local options = {}
