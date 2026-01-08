@@ -514,20 +514,10 @@ local function prompt_destination_type(cb)
 end
 
 local function execute_rebase(source_ids, source_type, dest_id, dest_type)
-  local prompt = jj.build_rebase_confirmation_msg(source_ids, dest_type, dest_id)
-
-  dialog_window.confirm(
-    prompt,
-    function()
-      jj.execute_rebase(source_ids, source_type, dest_id, dest_type, function()
-        clear_selections()
-        M.log()
-      end)
-    end,
-    function()
-      vim.notify("Rebase cancelled", vim.log.levels.INFO)
-    end
-  )
+  jj.execute_rebase(source_ids, source_type, dest_id, dest_type, function()
+    clear_selections()
+    M.log()
+  end)
 end
 
 local function rebase_change()

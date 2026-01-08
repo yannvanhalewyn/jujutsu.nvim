@@ -264,23 +264,6 @@ M.rebase_destination_types = {
   },
 }
 
--- Build rebase confirmation message
-M.build_rebase_confirmation_msg = function(source_ids, dest_type, dest_id)
-  local count = #source_ids
-  local ids_preview = count <= 3
-    and table.concat(vim.tbl_map(function(id) return id:sub(1, 8) end, source_ids), ", ")
-    or string.format("%s, ... (%d total)", source_ids[1]:sub(1, 8), count)
-
-  return string.format(
-    "Rebase %d %s [%s] %s %s?",
-    count,
-    count == 1 and "change" or "changes",
-    ids_preview,
-    dest_type.preposition,
-    dest_id:sub(1, 8)
-  )
-end
-
 M.execute_rebase = function(source_ids, source_type, dest_id, dest_type, on_success)
   local args = { "jj", "rebase" }
 
