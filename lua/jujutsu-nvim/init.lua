@@ -176,6 +176,7 @@ local function new_change()
   if #selected_ids > 0 then
     jj.new_change(jj.make_revset(selected_ids), function()
       vim.notify("Created new change on " .. table.concat(selected_ids, ", "), vim.log.levels.INFO)
+      clear_selections()
       M.log()
     end)
 
