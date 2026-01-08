@@ -214,7 +214,7 @@ only necessary if you want to change the default behavior.
 
 ```lua
 require("jujutsu-nvim").setup({
-  -- Diff viewer: "difftastic", "diffview", "none"
+  -- Diff viewer: "difftastic", "diffview", "codediff", none"
   diff_preset = "difftastic",  -- default
 
   -- Help window position: "center", "bottom_right"
@@ -242,6 +242,7 @@ require("jujutsu-nvim").setup({
 
 - **`"difftastic"`** (default) - Opens diffs using [difftastic.nvim](https://github.com/clabby/difftastic.nvim) in a new tab
 - **`"diffview"`** - Opens diffs using [diffview.nvim](https://github.com/sindrets/diffview.nvim)
+- **`"codediff"`** - Opens diffs using [codediff.nvim](https://github.com/esmuellert/codediff.nvim)
 - **`"none"`** - Disables the default `<CR>` behavior (useful if you want to add your own via keymaps)
 
 ### Custom Keymaps
