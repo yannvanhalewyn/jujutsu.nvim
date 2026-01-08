@@ -720,7 +720,7 @@ local function close_jj_window()
 end
 
 local function run_in_jj_window(args, title, setup_keymaps_fn)
-  terminal_buffer.run_command_in_new_terminal_window(args, {
+  terminal_buffer.run_command_in_terminal_window(args, {
     buf = M.state.log_buffer,
     window = M.state.log_window,
     title = title,

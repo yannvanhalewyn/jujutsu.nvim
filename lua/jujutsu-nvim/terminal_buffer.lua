@@ -1,15 +1,27 @@
 local M = {}
 
-M.run_command_in_new_terminal_window = function (args, opts)
-  local cmd_args = { "jj", "--no-pager", "--color=always" }
-  vim.list_extend(cmd_args, args)
+--- @class TerminalWindowOpts
+--- @field buf number? Existing buffer to replace (if window is reused)
+--- @field window number? Existing window to reuse
+--- @field title string? Buffer name to display (defaults to "[JJ]")
+--- @field on_close function? Callback invoked when the buffer is wiped out
+--- @field on_ready fun(window: number, buffer: number)? Callback invoked when buffer is ready
 
-  -- Build shell command
-  local cmd_str = table.concat(vim.tbl_map(vim.fn.shellescape, cmd_args), " ")
-  local shell_cmd = "sh -c " .. vim.fn.shellescape(cmd_str)
-
+--- Runs a jj command in a terminal buffer within a window.
+--- If a window is provided and valid, reuses it by replacing the buffer.
+--- Otherwise, creates a new split window with a terminal buffer.
+---
+--- @param args string[] Command arguments to pass to jj (e.g., {"log", "--summary"})
+--- @param opts TerminalWindowOpts Options for the terminal window
+M.run_command_in_terminal_window = function (args, opts)
   local buffer = opts.buf
   local window = opts.window
+
+  local cmd = vim.list_extend({ "jj", "--no-pager", "--color=always" }, args)
+
+  -- Build shell command
+  local cmd_str = table.concat(vim.tbl_map(vim.fn.shellescape, cmd), " ")
+  local shell_cmd = "sh -c " .. vim.fn.shellescape(cmd_str)
 
   if window and vim.api.nvim_win_is_valid(window) then
     -- Reuse existing window - replace buffer with new terminal buffer
