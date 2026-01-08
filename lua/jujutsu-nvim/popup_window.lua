@@ -1,14 +1,27 @@
 local M = {}
 
--- Creates a floating popup window with common styling
--- @param opts table with:
---   - lines: table - array of strings to display in the window
---   - highlights: table - array of {line, col_start, col_end, hl_group} for syntax highlighting
---   - title: string - window title (default: " JJ ")
---   - position: string - "center" or "bottom_right" (default: "center")
---   - on_close: function - callback when window closes (optional)
---   - help_text: string - help text to show at bottom (default: "<Esc> or q to close")
--- @return table with { win, buf, close } where close() is the cleanup function
+--- @class PopupHighlight
+--- @field line number 0-based line index
+--- @field col_start number Starting column (0-based)
+--- @field col_end number Ending column (-1 for end of line)
+--- @field hl_group string Highlight group name
+
+--- @class PopupWindowOpts
+--- @field lines string[]? Array of strings to display in the window
+--- @field highlights PopupHighlight[]? Array of highlight specifications
+--- @field title string? Window title (defaults to " JJ ")
+--- @field position "center"|"bottom_right"? Window position (defaults to "center")
+--- @field on_cancel function? Callback when window is cancelled/closed
+--- @field help_text string? Help text to show at bottom (defaults to "<Esc> or q to close")
+
+--- @class PopupWindow
+--- @field win number Window handle
+--- @field buf number Buffer handle
+--- @field close function Cleanup function to close the popup
+
+--- Creates a floating popup window with common styling
+--- @param opts PopupWindowOpts Options for the popup window
+--- @return PopupWindow
 M.create = function(opts)
   local lines = opts.lines or {}
   local highlights = opts.highlights or {}

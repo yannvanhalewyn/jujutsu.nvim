@@ -329,6 +329,7 @@ Here are the things I'd like to be adding soon. Please submit issues for any ide
 - [ ] Squashing current hunk from any code file
 - [ ] 'U' to display the op log with the ability to undo specific operation using 'u'
 - [ ] Add a good public Lua API to build own flows more easily
+- [ ] Maybe, implement resolving by leveraging [jj-diffconflicts](https://github.com/rafikdraoui/jj-diffconflicts)
 
 ## Development
 

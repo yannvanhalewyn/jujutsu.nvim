@@ -1,5 +1,13 @@
 local M = {}
 
+--- @class JJChange
+--- @field change_id string Short change ID
+--- @field commit_sha string Full commit SHA
+--- @field description string Change description
+
+--- @param cmd string[]
+--- @param on_success function?
+--- @param on_error function?
 local function run_jj_command(cmd, on_success, on_error)
   local result = vim.system(cmd, { text = true }):wait()
 
@@ -17,10 +25,16 @@ end
 --------------------------------------------------------------------------------
 -- Change queries
 
+--- Combine multiple change IDs into a revset expression
+--- @param change_ids string[] Array of change IDs
+--- @return string Revset expression
 M.make_revset = function(change_ids)
   return table.concat(change_ids, " | ")
 end
 
+--- Get changes matching a revset expression
+--- @param revset string Revset expression to query
+--- @param callback fun(changes: JJChange[]) Callback with array of changes
 M.get_changes = function(revset, callback)
   local template = 'separate(";", change_id.short(), commit_id, coalesce(description, " ")) ++ "\n---END-CHANGE---\n"'
 
@@ -56,6 +70,9 @@ M.get_changes = function(revset, callback)
   )
 end
 
+--- Get changes by their IDs
+--- @param change_ids string[] Array of change IDs
+--- @param callback fun(changes: JJChange[]) Callback with array of changes
 M.get_changes_by_ids = function(change_ids, callback)
   M.get_changes(M.make_revset(change_ids), function(changes)
     if #changes ~= #change_ids then
@@ -73,8 +90,10 @@ local function strip_ansi(str)
   return str:gsub("\27%[[0-9;]*m", "")
 end
 
--- Try to extract change ID from jj log output
--- Format: "◉  mrtwmypl yann.vanhalewyn@gmail.com 2026-01-03 22:53:01 02a96588"
+--- Try to extract change ID from jj log output
+--- Format: "◉  mrtwmypl yann.vanhalewyn@gmail.com 2026-01-03 22:53:01 02a96588"
+--- @param line string Line from jj log output
+--- @return string? change_id The extracted change ID, or nil if not found
 M.extract_change_id =  function(line)
   local clean_line = strip_ansi(line)
 

@@ -30,6 +30,15 @@ vim.api.nvim_set_hl(0, "JJLogChange", { link = "CursorLine" })
 -- Configuration
 --------------------------------------------------------------------------------
 
+--- @class KeymapBinding
+--- @field cmd string|function Command name or function to execute
+--- @field desc string Description of the keybinding
+
+--- @class JJConfig
+--- @field diff_preset "difftastic"|"diffview"|"none" Diff viewer preset
+--- @field help_position "center"|"bottom_right" Help window position
+--- @field keymap table<string, KeymapBinding> Keymap configuration
+
 -- Default configuration
 local default_config = {
   -- Diff viewer preset options: "difftastic", "diffview" or "none"
@@ -142,8 +151,9 @@ end
 -- Extracting changes from log output
 --------------------------------------------------------------------------------
 
--- Extracts the change ID of the change at cursor, and when valid calls the
--- operation with it.
+--- Extracts the change ID of the change at cursor, and when valid calls the
+--- operation with it.
+--- @param operation fun(change_id: string) Function to call with the change ID
 M.with_change_at_cursor = function(operation)
   local line = vim.api.nvim_get_current_line()
   local change_id = jj.extract_change_id(line)
@@ -168,6 +178,7 @@ local function new_change()
       vim.notify("Created new change on " .. table.concat(selected_ids, ", "), vim.log.levels.INFO)
       M.log()
     end)
+
   else
     M.with_change_at_cursor(function(change_id)
       jj.new_change(change_id, function()
@@ -770,11 +781,14 @@ local actions = {
   end,
 }
 
+--- Setup jujutsu.nvim with user configuration
+--- @param user_config JJConfig? User configuration to merge with defaults
 function M.setup(user_config)
   M.config = vim.tbl_deep_extend("force", default_config, user_config or {})
 end
 
--- Open jj log
+--- Open jj log view
+--- @param args string[]? Additional arguments to pass to jj log
 function M.log(args)
   args = args or {}
   local log_args = { "log" }
@@ -797,7 +811,8 @@ function M.log(args)
   end)
 end
 
--- Run any jj command interactively
+--- Run any jj command interactively
+--- @param args_str string? Command arguments as a string (prompts if nil)
 function M.run(args_str)
   if not args_str or args_str == "" then
     vim.ui.input({ prompt = "jj command: " }, function(input)

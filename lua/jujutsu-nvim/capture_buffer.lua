@@ -2,13 +2,16 @@ local u = require("jujutsu-nvim.utils")
 
 local M = {}
 
--- Open an editor buffer meant to capture user input
--- @param opts table with:
---   - content: string - initial content
---   - filetype: string - buffer filetype
---   - extra_help_text: string - extra help text shown at bottom
---   - on_submit: function(content: string) - callback with user content (without help lines)
---   - on_abort: function() - optional callback on abort
+--- @class CaptureBufferOpts
+--- @field content string? Initial content to display
+--- @field filetype string? Buffer filetype (e.g., 'jjdescription', 'text')
+--- @field extra_help_text string? Extra help text shown at top of buffer
+--- @field on_submit fun(content: string) Callback with user content (without help lines)
+--- @field on_abort function? Optional callback on abort
+--- @field on_ready fun(window: number, buffer: number)? Callback invoked when buffer is ready
+
+--- Open an editor buffer meant to capture user input
+--- @param opts CaptureBufferOpts
 M.open = function(opts)
   local buf = vim.api.nvim_create_buf(false, false)
   local temp_file = vim.fn.tempname()

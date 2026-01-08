@@ -5,12 +5,19 @@ local popup_window = require("jujutsu-nvim.popup_window")
 -- Define highlight group for prompt keys (yellow/orange)
 vim.api.nvim_set_hl(0, "JJPromptKey", { fg = "#FFA500", bold = true })
 
--- Show a floating window with single-key options
--- @param opts table with:
---   - prompt: string - question to ask user
---   - options: table - list of {key: string, label: string, value: any}
---   - on_select: function(option) - callback with the selected option
---   - on_cancel: function() - optional callback on cancel/escape
+--- @class DialogOption
+--- @field key string Single key to trigger this option
+--- @field label string Display label for the option
+--- @field value any Value to pass to on_select callback
+
+--- @class FloatingOptionsOpts
+--- @field prompt string? Question to ask user
+--- @field options DialogOption[] List of selectable options
+--- @field on_select fun(option: DialogOption) Callback with the selected option
+--- @field on_cancel function? Optional callback on cancel/escape
+
+--- Show a floating window with single-key options
+--- @param opts FloatingOptionsOpts
 M.show_floating_options = function(opts)
   local prompt = opts.prompt or "Select an option:"
   local options = opts.options or {}
@@ -55,10 +62,10 @@ M.show_floating_options = function(opts)
   end
 end
 
--- Prompt for yes/no confirmation
--- @param prompt string - question to ask (without the y/N suffix)
--- @param on_confirm function() - callback if user confirms
--- @param on_cancel function() - optional callback if user cancels
+--- Prompt for yes/no confirmation
+--- @param prompt string Question to ask
+--- @param on_confirm function? Callback if user confirms
+--- @param on_cancel function? Optional callback if user cancels
 M.confirm = function(prompt, on_confirm, on_cancel)
   M.show_floating_options({
     prompt = prompt,
