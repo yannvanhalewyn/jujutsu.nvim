@@ -531,25 +531,22 @@ local function execute_rebase(source_ids, source_type, dest_id, dest_type)
 end
 
 local function rebase_change()
-  local source_ids = get_selected_ids()
-  if #source_ids > 0 then
-
-    M.with_change_at_cursor(function (dest_id)
+  M.with_change_at_cursor(function (change_at_cursor_id)
+    local source_ids = get_selected_ids()
+    if #source_ids > 0 then
       prompt_destination_type(function(dest_type)
-        execute_rebase(source_ids, jj.rebase_source_types[1], dest_id, dest_type)
+        execute_rebase(source_ids, jj.rebase_source_types[1], change_at_cursor_id, dest_type)
       end)
-    end)
-  else
-    M.with_change_at_cursor(function(source_id)
+    else
       prompt_source_type(function(source_type)
         select_change({ prompt = "Select change to rebase onto" }, function(dest_id)
           prompt_destination_type(function(dest_type)
-            execute_rebase({ source_id }, source_type, dest_id, dest_type)
+            execute_rebase({ change_at_cursor_id }, source_type, dest_id, dest_type)
           end)
         end)
       end)
-    end)
-  end
+    end
+  end)
 end
 
 --------------------------------------------------------------------------------
