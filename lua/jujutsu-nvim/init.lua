@@ -35,12 +35,12 @@ vim.api.nvim_set_hl(0, "JJLogChange", { link = "CursorLine" })
 --- @field desc string Description of the keybinding
 
 --- @class JJConfig
---- @field diff_preset "difftastic"|"diffview"|"none" Diff viewer preset
+--- @field diff_preset "difftastic"|"diffview"|"codediff"|"none" Diff viewer preset
 --- @field help_position "center"|"bottom_right" Help window position
 --- @field keymap table<string, KeymapBinding> Keymap configuration
 
 local default_config = {
-  -- Diff viewer preset options: "difftastic", "diffview" or "none"
+  -- Diff viewer preset options: "difftastic", "diffview", "codediff" or "none"
   diff_preset = "difftastic",
   -- Help window position: "center" or "bottom_right"
   help_position = "center",
@@ -88,6 +88,15 @@ local diff_presets = {
       vim.cmd(string.format("DiffviewOpen %s^!", changes[1].commit_sha))
     else
       vim.cmd(string.format("DiffviewOpen %s...%s", changes[1].commit_sha, changes[#changes].commit_sha))
+    end
+  end,
+
+  codediff = function(changes)
+    if #changes == 1 then
+      -- Diff with parent change
+        vim.cmd(string.format("CodeDiff %s %s", changes[1].commit_sha, changes[1].commit_sha .. "~1"))
+    else
+      vim.cmd(string.format("CodeDiff %s %s", changes[1].commit_sha, changes[#changes].commit_sha))
     end
   end,
 
