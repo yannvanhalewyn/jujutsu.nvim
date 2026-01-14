@@ -94,9 +94,9 @@ local diff_presets = {
   codediff = function(changes)
     if #changes == 1 then
       -- Diff with parent change
-        vim.cmd(string.format("CodeDiff %s %s", changes[1].commit_sha, changes[1].commit_sha .. "~1"))
+        vim.cmd(string.format("CodeDiff %s %s", changes[1].commit_sha .. "~1", changes[1].commit_sha))
     else
-      vim.cmd(string.format("CodeDiff %s %s", changes[1].commit_sha, changes[#changes].commit_sha))
+      vim.cmd(string.format("CodeDiff %s %s", changes[#changes].commit_sha, changes[1].commit_sha))
     end
   end,
 
