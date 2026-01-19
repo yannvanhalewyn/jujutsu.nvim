@@ -48,6 +48,7 @@ local default_config = {
     ["?"] = { cmd = "show_help", desc = "Show keybindings help" },
     j = { cmd = "jump_to_next_change", desc = "Jump to next change" },
     k = { cmd = "jump_to_prev_change", desc = "Jump to previous change" },
+    ["@"] = { cmd = "jump_to_current_change", desc = "Jump to the currently edited change" },
     q = { cmd = "quit", desc = "Close window" },
     R = { cmd = "refresh", desc = "Refresh log view" },
     ["<CR>"] = { cmd = "open_diff", desc = "Open diff viewer" },
@@ -674,6 +675,28 @@ local function jump_to_prev_change()
   end
 end
 
+-- Navigate to the line representing the current change
+local function jump_to_current_change(ignore_not_found)
+  jj.get_changes("@", function(changes)
+    if #changes ~= 1 then
+      return
+    end
+    local current_change_id = changes[1].change_id
+    local total_lines = vim.api.nvim_buf_line_count(M.state.log_buffer)
+    for line_num = 1, total_lines do
+      local line = vim.api.nvim_buf_get_lines(M.state.log_buffer, line_num - 1, line_num, false)[1]
+      local line_change_id = jj.extract_change_id(line)
+      if line_change_id and jj.change_ids_match(line_change_id, current_change_id) then
+        vim.api.nvim_win_set_cursor(M.state.log_window, { line_num, 0 })
+        return
+      end
+    end
+    if not ignore_not_found then
+      vim.notify("The current change " .. " does not appear in the revset", vim.log.levels.ERROR)
+    end
+  end)
+end
+
 -- Update visual indicators for selections
 local function update_selection_display()
   vim.api.nvim_buf_clear_namespace(M.state.log_buffer, ns_id, 0, -1)
@@ -772,6 +795,7 @@ local actions = {
   ["quit"] = close_jj_window,
   ["jump_to_next_change"] = jump_to_next_change,
   ["jump_to_prev_change"] = jump_to_prev_change,
+  ["jump_to_current_change"] = jump_to_current_change,
   ["refresh"] = function() M.log() end,
   ["undo"] = undo,
   ["set_revset"] = prompt_and_set_revset,
@@ -825,6 +849,17 @@ function M.log(args)
         { buffer = buf, silent = true, nowait = true, desc = "JJ: " .. binding.desc }
       )
     end
+
+    -- After loading the Jujutsu log, jump to the current change
+    vim.api.nvim_create_autocmd("TermClose", {
+      buffer = buf,
+      once = true,
+      callback = function()
+        vim.schedule(function()
+          jump_to_current_change(true)
+        end)
+      end,
+    })
   end)
 end
 

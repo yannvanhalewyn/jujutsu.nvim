@@ -115,6 +115,20 @@ M.extract_change_id =  function(line)
   return change_id
 end
 
+--- Check if two, possibly shortened change IDs, represent the same change
+--- @param id1 string
+--- @param id2 string
+--- @return boolean
+M.change_ids_match = function(id1, id2)
+  local min_len = math.min(#id1, #id2)
+  if min_len == 0 then
+    -- Edge case: If one of the IDs is empty, min_len will be zero and the
+    -- other ID will be shortened to the empty string as well.
+    return id1 == id2
+  end
+  return id1:sub(1, min_len) == id2:sub(1, min_len)
+end
+
 --------------------------------------------------------------------------------
 -- Basic Operations
 
