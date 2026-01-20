@@ -580,7 +580,8 @@ end
 --------------------------------------------------------------------------------
 
 local function handle_divergent_change(change_id, on_commit_selected)
-  jj.get_divergent_commits(change_id, function(is_divergent, commits)
+  jj.get_divergent_commits(change_id, function(is_divergent, changes)
+    print(vim.inspect(changes))
     if not is_divergent then
       -- Not divergent, just use the change_id
       on_commit_selected({ change_id }, false)
@@ -589,7 +590,7 @@ local function handle_divergent_change(change_id, on_commit_selected)
 
     -- Build options for each divergent commit
     local options = {}
-    for i, commit in ipairs(commits) do
+    for i, commit in ipairs(changes) do
       table.insert(options, {
         key = tostring(i),
         label = string.format(
@@ -609,14 +610,12 @@ local function handle_divergent_change(change_id, on_commit_selected)
     })
 
     dialog_window.show_floating_options({
-      prompt = string.format('Divergent change detected (%d commits):', #commits),
+      prompt = string.format('Divergent change detected (%d commits):', #changes),
       options = options,
       on_select = function(option)
         if option.value == 'diff' then
-          -- Pass all commits to show diff between them
-          on_commit_selected(commits, true)
+          on_commit_selected(changes, true)
         else
-          -- User selected a specific commit, pass it as a single-item array
           on_commit_selected({ option.value }, true)
         end
       end,
