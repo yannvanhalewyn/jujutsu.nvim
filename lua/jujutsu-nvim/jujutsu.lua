@@ -94,13 +94,15 @@ end
 
 --- Try to extract change ID from jj log output
 --- Format: "◉  mrtwmypl yann.vanhalewyn@gmail.com 2026-01-03 22:53:01 02a96588"
+--- For divergent changes (marked with ??), returns the change ID (without ??)
 --- @param line string Line from jj log output
 --- @return string? change_id The extracted change ID, or nil if not found
 M.extract_change_id =  function(line)
   local clean_line = strip_ansi(line)
 
   -- Pattern 1: Extract the first alphanumeric string after box-drawing/special chars
-  local change_id = clean_line:match "^[^%w]*(%w+)%s+%S+@"
+  -- This handles both normal and divergent changes (strips the ?? markers)
+  local change_id = clean_line:match "^[^%w]*(%w+)%??%??%s+%S+@"
 
   -- Pattern 2: If that fails, try to get 8-char hex at the end of the line
   if not change_id then
@@ -127,6 +129,18 @@ M.change_ids_match = function(id1, id2)
     return id1 == id2
   end
   return id1:sub(1, min_len) == id2:sub(1, min_len)
+end
+
+--- Check if a change ID is divergent and get all divergent commits
+--- @param change_id string Change ID to check
+--- @param callback fun(is_divergent: boolean, commits: JJChange[]?) Callback with divergence info
+M.get_divergent_commits = function(change_id, callback)
+  -- Use the full change_id() revset to get all commits with this change ID
+  local revset = string.format("change_id(%s)", change_id)
+  M.get_changes(revset, function(changes)
+    local is_divergent = #changes > 1
+    callback(is_divergent, changes)
+  end)
 end
 
 --------------------------------------------------------------------------------

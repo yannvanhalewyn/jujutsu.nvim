@@ -578,6 +578,55 @@ end
 -- Diff operations
 --------------------------------------------------------------------------------
 
+local function handle_divergent_change(change_id, on_commit_selected)
+  jj.get_divergent_commits(change_id, function(is_divergent, commits)
+    if not is_divergent then
+      -- Not divergent, just use the change_id
+      on_commit_selected(change_id)
+      return
+    end
+
+    -- Build options for each divergent commit
+    local options = {}
+    for i, commit in ipairs(commits) do
+      table.insert(options, {
+        key = tostring(i),
+        label = string.format(
+          "%s - %s",
+          commit.commit_sha:sub(1, 12),
+          commit.description:match("^[^\n]*") or "(no description)"
+        ),
+        value = commit
+      })
+    end
+
+    -- Add option to compare divergent commits
+    table.insert(options, {
+      key = 'd',
+      label = 'Show diff between divergent commits',
+      value = 'diff'
+    })
+
+    dialog_window.show_floating_options({
+      prompt = string.format('Divergent change detected (%d commits):', #commits),
+      options = options,
+      on_select = function(option)
+        if option.value == 'diff' then
+          -- Show diff between the two commits
+          local viewer = get_diff_viewer()
+          viewer(commits)
+        else
+          -- User selected a specific commit
+          on_commit_selected(option.value.commit_sha)
+        end
+      end,
+      on_cancel = function()
+        vim.notify("Selection cancelled", vim.log.levels.INFO)
+      end
+    })
+  end)
+end
+
 local function open_diff_for_changes()
   local viewer = get_diff_viewer()
   local selected_ids = get_selected_ids()
@@ -585,7 +634,9 @@ local function open_diff_for_changes()
     jj.get_changes_by_ids(selected_ids, viewer)
   else
     M.with_change_at_cursor(function(change_id)
-      jj.get_changes_by_ids({ change_id }, viewer)
+      handle_divergent_change(change_id, function(resolved_id)
+        jj.get_changes_by_ids({ resolved_id }, viewer)
+      end)
     end)
   end
 end
