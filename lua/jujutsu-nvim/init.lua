@@ -77,11 +77,12 @@ M.config = vim.deepcopy(default_config)
 
 local diff_presets = {
   difftastic = function(changes)
-    local change_ids = vim.tbl_map(function(c)
-      return c.change_id end,
+    -- Use commit SHAs instead of change IDs to avoid issues with divergent changes
+    local commit_shas = vim.tbl_map(function(c)
+      return c.commit_sha end,
       changes
     )
-    vim.cmd("Difft " .. jj.make_revset(change_ids))
+    vim.cmd("Difft " .. jj.make_revset(commit_shas))
   end,
 
   diffview = function(changes)
@@ -582,7 +583,7 @@ local function handle_divergent_change(change_id, on_commit_selected)
   jj.get_divergent_commits(change_id, function(is_divergent, commits)
     if not is_divergent then
       -- Not divergent, just use the change_id
-      on_commit_selected(change_id)
+      on_commit_selected({ change_id }, false)
       return
     end
 
@@ -612,12 +613,11 @@ local function handle_divergent_change(change_id, on_commit_selected)
       options = options,
       on_select = function(option)
         if option.value == 'diff' then
-          -- Show diff between the two commits
-          local viewer = get_diff_viewer()
-          viewer(commits)
+          -- Pass all commits to show diff between them
+          on_commit_selected(commits, true)
         else
-          -- User selected a specific commit
-          on_commit_selected(option.value.commit_sha)
+          -- User selected a specific commit, pass it as a single-item array
+          on_commit_selected({ option.value }, true)
         end
       end,
       on_cancel = function()
@@ -634,8 +634,14 @@ local function open_diff_for_changes()
     jj.get_changes_by_ids(selected_ids, viewer)
   else
     M.with_change_at_cursor(function(change_id)
-      handle_divergent_change(change_id, function(resolved_id)
-        jj.get_changes_by_ids({ resolved_id }, viewer)
+      handle_divergent_change(change_id, function(items, is_commit_data)
+        if is_commit_data then
+          -- Items are already JJChange objects, pass directly to viewer
+          viewer(items)
+        else
+          -- Items are change IDs, need to fetch the changes first
+          jj.get_changes_by_ids(items, viewer)
+        end
       end)
     end)
   end
