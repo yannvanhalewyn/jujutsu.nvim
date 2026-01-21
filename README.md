@@ -111,6 +111,7 @@ Press `?` in the log view to see all available keybindings organized by category
 |-----|--------|-------------|
 | `j` | Jump to next change | Move to the next change in the log |
 | `k` | Jump to previous change | Move to the previous change in the log |
+| `@` | Jump to current change | Move to the currently edited change in the log |
 | `<CR>` | Open diff viewer | Open diff viewer for change under cursor |
 
 #### Log Window
@@ -289,6 +290,7 @@ The following action names can be used as string values in your keymap (or as th
 | `quit` | Close the log window |
 | `jump_to_next_change` | Navigate to next change |
 | `jump_to_prev_change` | Navigate to previous change |
+| `jump_to_current_change` | Navigate to the currently edited change |
 | `refresh` | Refresh the log view |
 | `undo` | Undo the last operation |
 | `set_revset` | Open log with custom revset |
