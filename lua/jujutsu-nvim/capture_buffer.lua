@@ -14,11 +14,10 @@ local M = {}
 --- @param opts CaptureBufferOpts
 M.open = function(opts)
   local buf = vim.api.nvim_create_buf(false, false)
-  local temp_file = vim.fn.tempname()
 
   -- Set buffer options
-  vim.api.nvim_buf_set_name(buf, temp_file)
-  vim.bo[buf].buftype = ''
+  vim.api.nvim_buf_set_name(buf, 'jj://describe')
+  vim.bo[buf].buftype = 'acwrite'
   vim.bo[buf].bufhidden = 'wipe'
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = opts.filetype or 'text'
@@ -33,6 +32,7 @@ M.open = function(opts)
     "JJ: <C-c><C-k> - abort"
   })
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].modified = false
 
   -- Open buffer in a split
   vim.cmd('botright split')
@@ -55,15 +55,39 @@ M.open = function(opts)
     end
   end
 
+  vim.api.nvim_create_autocmd('BufWriteCmd', {
+    callback = function()
+      local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      -- Filter out lines starting with "JJ:"
+      local filtered_lines = u.remove(content, function(x) return x:match("^JJ:") end)
+      local user_content = table.concat(filtered_lines, "\n")
+      opts.on_submit(user_content)
+      vim.bo[buf].modified = false
+    end,
+    buffer = buf,
+  })
+
+  vim.api.nvim_create_autocmd('BufUnload', {
+    callback = function()
+      if vim.bo[buf].modified then
+        -- For some reason, without the schedule the color scheme of the
+        -- notification gets messed up.
+        vim.schedule(function()
+          if opts.on_abort then
+            opts.on_abort()
+          else
+            vim.notify("Aborted", vim.log.levels.INFO)
+          end
+        end)
+      end
+    end,
+    buffer = buf,
+  })
+
   local function abort()
     -- Makes it so the cursor remains at top after edit buffer close
     vim.cmd.stopinsert()
     vim.api.nvim_buf_delete(buf, { force = true })
-    if opts.on_abort then
-      opts.on_abort()
-    else
-      vim.notify("Aborted", vim.log.levels.INFO)
-    end
   end
 
   -- Setup keymaps
@@ -75,13 +99,6 @@ M.open = function(opts)
   vim.keymap.set("i", "<C-c><C-k>", abort, keymap_opts("JJ: Abort"))
   vim.keymap.set("n", "<C-c><C-c>", submit, keymap_opts("JJ: Submit"))
   vim.keymap.set("i", "<C-c><C-c>", submit, keymap_opts("JJ: Submit"))
-
-  -- Cleanup temp file
-  vim.api.nvim_create_autocmd("BufWipeout", {
-    buffer = buf,
-    once = true,
-    callback = function() vim.fn.delete(temp_file) end
-  })
 
   if opts.on_ready then
     opts.on_ready(win, buf)
