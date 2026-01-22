@@ -52,6 +52,7 @@ local default_config = {
     q = { cmd = "quit", desc = "Close window" },
     R = { cmd = "refresh", desc = "Refresh log view" },
     ["<CR>"] = { cmd = "open_diff", desc = "Open diff viewer" },
+    v = { cmd = "switch_diff_viewer", desc = "Switch diff viewer preset" },
     l = { cmd = "set_revset", desc = "Set custom revset" },
     d = { cmd = "describe", desc = "Edit description" },
     n = { cmd = "new_change", desc = "Create new change" },
@@ -324,6 +325,31 @@ local function prompt_and_set_revset()
       return
     end
     M.set_custom_revset(input)
+  end)
+end
+
+local function switch_diff_viewer()
+  local preset_names = { "difftastic", "diffview", "codediff", "none" }
+  local current = M.config.diff_preset
+  
+  -- Build display items with current preset marked
+  local items = vim.tbl_map(function(name)
+    return name == current and name .. " (current)" or name
+  end, preset_names)
+  
+  vim.ui.select(items, {
+    prompt = "Select diff viewer preset:",
+    format_item = function(item) return item end
+  }, function(choice)
+    if not choice then
+      vim.notify("Diff viewer switch cancelled", vim.log.levels.INFO)
+      return
+    end
+    
+    -- Strip " (current)" suffix if present
+    local preset = choice:match("^(%w+)") or choice
+    M.config.diff_preset = preset
+    vim.notify("Switched to diff viewer: " .. preset, vim.log.levels.INFO)
   end)
 end
 
@@ -862,6 +888,7 @@ local actions = {
   ["refresh"] = function() M.log() end,
   ["undo"] = undo,
   ["set_revset"] = prompt_and_set_revset,
+  ["switch_diff_viewer"] = switch_diff_viewer,
   ["open_diff"] = open_diff_for_changes,
   ["describe"] = function() M.with_change_at_cursor(describe) end,
   ["new_change"] = new_change,
