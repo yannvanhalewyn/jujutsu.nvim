@@ -63,6 +63,7 @@ local default_config = {
     a = { cmd = "abandon_changes", desc = "Abandon change(s)" },
     A = { cmd = "absorb_changes", desc = "Absorb change(s)" },
     e = { cmd = "edit_change", desc = "Edit (checkout) change" },
+    E = { cmd = "edit_change_menu", desc = "Edit change options menu" },
     u = { cmd = "undo", desc = "Undo last operation" },
     r = { cmd = "rebase_change", desc = "Rebase change" },
     s = { cmd = "squash_change", desc = "Squash into parent" },
@@ -387,11 +388,43 @@ local function absorb_changes()
   end)
 end
 
-local function edit_change(change_id)
+local function edit_change(change_id, opts)
   jj.edit_change(change_id, function()
     vim.notify("Checked out change " .. change_id, vim.log.levels.INFO)
     M.log()
     vim.cmd.checktime()
+  end, opts)
+end
+
+local function edit_change_menu_impl(change_id, ignore_immutable)
+  local ignore_immutable_flag = ignore_immutable and "✓ --ignore-immutable" or "  --ignore-immutable"
+  local ignore_immutable_hl = ignore_immutable and "JJFlagEnabled" or "JJFlagDisabled"
+  
+  local options = {
+    { key = 'e', label = 'Edit (checkout) change', value = 'edit' },
+    { key = 'i', label = ignore_immutable_flag, value = 'toggle_ignore_immutable', hl_group = ignore_immutable_hl },
+  }
+  
+  dialog_window.show_floating_options({
+    prompt = 'Edit change options:',
+    options = options,
+    on_select = function(option)
+      if option.value == 'toggle_ignore_immutable' then
+        -- Reopen the menu with toggled ignore_immutable state
+        edit_change_menu_impl(change_id, not ignore_immutable)
+      elseif option.value == 'edit' then
+        edit_change(change_id, { ignore_immutable = ignore_immutable })
+      end
+    end,
+    on_cancel = function()
+      vim.notify("Edit change cancelled", vim.log.levels.INFO)
+    end
+  })
+end
+
+local function edit_change_menu()
+  M.with_change_at_cursor(function(change_id)
+    edit_change_menu_impl(change_id, false)
   end)
 end
 
@@ -984,6 +1017,7 @@ local actions = {
   ["abandon_changes"] = abandon_changes,
   ["absorb_changes"] = absorb_changes,
   ["edit_change"] = function() M.with_change_at_cursor(edit_change) end,
+  ["edit_change_menu"] = edit_change_menu,
   ["rebase_change"] = rebase_change,
   ["squash_change"] = squash_change,
   ["squash_to_target"] = function() M.with_change_at_cursor(squash_to_target) end,

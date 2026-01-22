@@ -179,8 +179,13 @@ M.absorb_change = function(revset, on_success)
   )
 end
 
-M.edit_change = function(change_id, on_success)
-  run_jj_command({ "jj", "edit", change_id }, on_success)
+M.edit_change = function(change_id, on_success, opts)
+  opts = opts or {}
+  local cmd = { "jj", "edit", change_id }
+  if opts.ignore_immutable then
+    table.insert(cmd, "--ignore-immutable")
+  end
+  run_jj_command(cmd, on_success)
 end
 
 M.describe = function(change_id, new_description, on_success)
