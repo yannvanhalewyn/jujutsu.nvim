@@ -25,6 +25,9 @@ M.state = default_state
 
 -- Highlight group for jj log change lines
 vim.api.nvim_set_hl(0, "JJLogChange", { link = "CursorLine" })
+-- Highlight groups for flag display
+vim.api.nvim_set_hl(0, "JJFlagDisabled", { fg = "#808080" })  -- Gray
+vim.api.nvim_set_hl(0, "JJFlagEnabled", { fg = "#9D7CD8" })   -- Purple-ish
 
 --------------------------------------------------------------------------------
 -- Configuration
@@ -56,6 +59,7 @@ local default_config = {
     l = { cmd = "set_revset", desc = "Set custom revset" },
     d = { cmd = "describe", desc = "Edit description" },
     n = { cmd = "new_change", desc = "Create new change" },
+    N = { cmd = "new_change_menu", desc = "New change options menu" },
     a = { cmd = "abandon_changes", desc = "Abandon change(s)" },
     A = { cmd = "absorb_changes", desc = "Absorb change(s)" },
     e = { cmd = "edit_change", desc = "Edit (checkout) change" },
@@ -205,24 +209,108 @@ end
 
 local dialog_window = require("jujutsu-nvim.dialog_window")
 
+local function execute_new_change(args, message, on_success, opts)
+  opts = opts or {}
+  local cmd = { "jj", "new" }
+  if opts.no_edit then
+    table.insert(cmd, "--no-edit")
+  end
+  if opts.ignore_immutable then
+    table.insert(cmd, "--ignore-immutable")
+  end
+  vim.list_extend(cmd, args)
+  
+  local result = vim.system(cmd, { text = true }):wait()
+  if result.code == 0 then
+    vim.notify(message, vim.log.levels.INFO)
+    if on_success then on_success() end
+  else
+    vim.notify("Command failed: " .. (result.stderr or ""), vim.log.levels.ERROR)
+  end
+end
+
 local function new_change()
   local selected_ids = get_selected_ids()
   if #selected_ids > 0 then
-    jj.new_change(jj.make_revset(selected_ids), function()
-      vim.notify("Created new change on " .. table.concat(selected_ids, ", "), vim.log.levels.INFO)
-      clear_selections()
-      M.log()
-      vim.cmd.checktime()
-    end)
-  else
-    M.with_change_at_cursor(function(change_id)
-      jj.new_change(change_id, function()
-        vim.notify("Created new change after " .. change_id, vim.log.levels.INFO)
+    execute_new_change(
+      { jj.make_revset(selected_ids) },
+      "Created new change on " .. table.concat(selected_ids, ", "),
+      function()
+        clear_selections()
         M.log()
         vim.cmd.checktime()
-      end)
+      end
+    )
+  else
+    M.with_change_at_cursor(function(change_id)
+      execute_new_change(
+        { change_id },
+        "Created new change after " .. change_id,
+        function()
+          M.log()
+          vim.cmd.checktime()
+        end
+      )
     end)
   end
+end
+
+local function new_change_menu_impl(change_id, no_edit, ignore_immutable)
+  local no_edit_flag = no_edit and "✓ --no-edit" or "  --no-edit"
+  local no_edit_hl = no_edit and "JJFlagEnabled" or "JJFlagDisabled"
+  
+  local ignore_immutable_flag = ignore_immutable and "✓ --ignore-immutable" or "  --ignore-immutable"
+  local ignore_immutable_hl = ignore_immutable and "JJFlagEnabled" or "JJFlagDisabled"
+  
+  local options = {
+    { key = 'a', label = 'Insert after', value = 'after' },
+    { key = 'b', label = 'Insert before', value = 'before' },
+    { key = 'e', label = no_edit_flag, value = 'toggle_no_edit', hl_group = no_edit_hl },
+    { key = 'i', label = ignore_immutable_flag, value = 'toggle_ignore_immutable', hl_group = ignore_immutable_hl },
+  }
+  
+  dialog_window.show_floating_options({
+    prompt = 'New change options:',
+    options = options,
+    on_select = function(option)
+      if option.value == 'toggle_no_edit' then
+        -- Reopen the menu with toggled no_edit state
+        new_change_menu_impl(change_id, not no_edit, ignore_immutable)
+      elseif option.value == 'toggle_ignore_immutable' then
+        -- Reopen the menu with toggled ignore_immutable state
+        new_change_menu_impl(change_id, no_edit, not ignore_immutable)
+      elseif option.value == 'after' then
+        execute_new_change(
+          { "-A", change_id },
+          "Created new change after " .. change_id,
+          function()
+            M.log()
+            vim.cmd.checktime()
+          end,
+          { no_edit = no_edit, ignore_immutable = ignore_immutable }
+        )
+      elseif option.value == 'before' then
+        execute_new_change(
+          { "-B", change_id },
+          "Created new change before " .. change_id,
+          function()
+            M.log()
+            vim.cmd.checktime()
+          end,
+          { no_edit = no_edit, ignore_immutable = ignore_immutable }
+        )
+      end
+    end,
+    on_cancel = function()
+      vim.notify("New change cancelled", vim.log.levels.INFO)
+    end
+  })
+end
+
+local function new_change_menu()
+  M.with_change_at_cursor(function(change_id)
+    new_change_menu_impl(change_id, false, false)
+  end)
 end
 
 local function describe(change_id)
@@ -892,6 +980,7 @@ local actions = {
   ["open_diff"] = open_diff_for_changes,
   ["describe"] = function() M.with_change_at_cursor(describe) end,
   ["new_change"] = new_change,
+  ["new_change_menu"] = new_change_menu,
   ["abandon_changes"] = abandon_changes,
   ["absorb_changes"] = absorb_changes,
   ["edit_change"] = function() M.with_change_at_cursor(edit_change) end,

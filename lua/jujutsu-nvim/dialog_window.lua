@@ -9,6 +9,7 @@ vim.api.nvim_set_hl(0, "JJPromptKey", { fg = "#FFA500", bold = true })
 --- @field key string Single key to trigger this option
 --- @field label string Display label for the option
 --- @field value any Value to pass to on_select callback
+--- @field hl_group string? Optional highlight group for the label
 
 --- @class FloatingOptionsOpts
 --- @field prompt string? Question to ask user
@@ -43,6 +44,15 @@ M.show_floating_options = function(opts)
       col_end = 4 + #option.key,
       hl_group = "JJPromptKey"
     })
+    -- Add optional label highlighting
+    if option.hl_group then
+      table.insert(highlights, {
+        line = line_idx,
+        col_start = 4 + #option.key + 2,  -- After key and spacing
+        col_end = #line,
+        hl_group = option.hl_group
+      })
+    end
   end
 
   -- Create popup window first
