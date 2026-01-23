@@ -220,7 +220,7 @@ local function execute_new_change(args, message, on_success, opts)
     table.insert(cmd, "--ignore-immutable")
   end
   vim.list_extend(cmd, args)
-  
+
   local result = vim.system(cmd, { text = true }):wait()
   if result.code == 0 then
     vim.notify(message, vim.log.levels.INFO)
@@ -259,17 +259,17 @@ end
 local function new_change_menu_impl(change_id, no_edit, ignore_immutable)
   local no_edit_flag = no_edit and "✓ --no-edit" or "  --no-edit"
   local no_edit_hl = no_edit and "JJFlagEnabled" or "JJFlagDisabled"
-  
+
   local ignore_immutable_flag = ignore_immutable and "✓ --ignore-immutable" or "  --ignore-immutable"
   local ignore_immutable_hl = ignore_immutable and "JJFlagEnabled" or "JJFlagDisabled"
-  
+
   local options = {
     { key = 'a', label = 'Insert after', value = 'after' },
     { key = 'b', label = 'Insert before', value = 'before' },
     { key = 'e', label = no_edit_flag, value = 'toggle_no_edit', hl_group = no_edit_hl },
     { key = 'i', label = ignore_immutable_flag, value = 'toggle_ignore_immutable', hl_group = ignore_immutable_hl },
   }
-  
+
   dialog_window.show_floating_options({
     prompt = 'New change options:',
     options = options,
@@ -399,12 +399,12 @@ end
 local function edit_change_menu_impl(change_id, ignore_immutable)
   local ignore_immutable_flag = ignore_immutable and "✓ --ignore-immutable" or "  --ignore-immutable"
   local ignore_immutable_hl = ignore_immutable and "JJFlagEnabled" or "JJFlagDisabled"
-  
+
   local options = {
     { key = 'e', label = 'Edit (checkout) change', value = 'edit' },
     { key = 'i', label = ignore_immutable_flag, value = 'toggle_ignore_immutable', hl_group = ignore_immutable_hl },
   }
-  
+
   dialog_window.show_floating_options({
     prompt = 'Edit change options:',
     options = options,
@@ -452,12 +452,12 @@ end
 local function switch_diff_viewer()
   local preset_names = { "difftastic", "diffview", "codediff", "none" }
   local current = M.config.diff_preset
-  
+
   -- Build display items with current preset marked
   local items = vim.tbl_map(function(name)
     return name == current and name .. " (current)" or name
   end, preset_names)
-  
+
   vim.ui.select(items, {
     prompt = "Select diff viewer preset:",
     format_item = function(item) return item end
@@ -466,7 +466,7 @@ local function switch_diff_viewer()
       vim.notify("Diff viewer switch cancelled", vim.log.levels.INFO)
       return
     end
-    
+
     -- Strip " (current)" suffix if present
     local preset = choice:match("^(%w+)") or choice
     M.config.diff_preset = preset
@@ -728,7 +728,6 @@ end
 
 local function handle_divergent_change(change_id, on_commit_selected)
   jj.get_divergent_commits(change_id, function(is_divergent, changes)
-    print(vim.inspect(changes))
     if not is_divergent then
       -- Not divergent, just use the change_id
       on_commit_selected({ change_id }, false)
