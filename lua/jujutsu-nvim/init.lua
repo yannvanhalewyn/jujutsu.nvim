@@ -56,6 +56,7 @@ local default_config = {
     R = { cmd = "refresh", desc = "Refresh log view" },
     ["<CR>"] = { cmd = "open_diff", desc = "Open diff viewer" },
     v = { cmd = "switch_diff_viewer", desc = "Switch diff viewer preset" },
+    G = { cmd = "show_global_flags", desc = "Toggle global flags", nowait = true },
     l = { cmd = "set_revset", desc = "Set custom revset" },
     d = { cmd = "describe", desc = "Edit description" },
     n = { cmd = "new_change", desc = "Create new change" },
