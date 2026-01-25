@@ -188,10 +188,14 @@ M.edit_change = function(change_id, on_success, opts)
   run_jj_command(cmd, on_success)
 end
 
-M.describe = function(change_id, new_description, on_success)
-  run_jj_command(
-    { "jj", "describe", "-r", change_id, "-m", new_description },
-    on_success)
+M.describe = function(change_id, new_description, global_flags, on_success)
+  local cmd = { "jj", "describe", "-r", change_id, "-m", new_description }
+
+  if global_flags and global_flags.ignore_immutable then
+    table.insert(cmd, "--ignore-immutable")
+  end
+
+  run_jj_command(cmd, on_success)
 end
 
 M.undo = function(op_id, on_success)
@@ -297,9 +301,20 @@ end
 --------------------------------------------------------------------------------
 -- Squash
 
-M.execute_squash = function(source_ids, target_id, message, on_success)
+M.execute_squash = function(source_ids, target_id, message, global_flags, on_success)
+  local args = {
+    "jj", "squash",
+    "--from", M.make_revset(source_ids),
+    "--into", target_id,
+    "-m", message
+  }
+
+  if global_flags.ignore_immutable then
+    table.insert(args, "--ignore-immutable")
+  end
+
   run_jj_command(
-    { "jj", "squash", "--from", M.make_revset(source_ids), "--into", target_id, "-m", message },
+    args,
     function()
       vim.notify(string.format(
         "Squashed %d %s into %s",
@@ -343,8 +358,13 @@ M.rebase_destination_types = {
   },
 }
 
-M.execute_rebase = function(source_ids, source_type, dest_id, dest_type, on_success)
+M.execute_rebase = function(source_ids, source_type, dest_id, dest_type, global_flags, on_success)
   local args = { "jj", "rebase" }
+
+  -- Add global flags
+  if global_flags.ignore_immutable then
+    table.insert(args, "--ignore-immutable")
+  end
 
   -- Add all selected changes as -r arguments
   for _, change_id in ipairs(source_ids) do

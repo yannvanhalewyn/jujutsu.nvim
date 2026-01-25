@@ -19,6 +19,9 @@ local default_state = {
   log_buffer = nil,
   custom_revset = nil,
   selected_changes = {},
+  global_flags = {
+    ignore_immutable = false,
+  },
 }
 
 M.state = default_state
@@ -327,7 +330,7 @@ local function describe(change_id)
         end
       end,
       on_submit = function(new_description)
-        jj.describe(change_id, new_description, function()
+        jj.describe(change_id, new_description, M.state.global_flags, function()
           vim.notify("Description updated for " .. change_id, vim.log.levels.INFO)
           M.log()
         end)
@@ -390,11 +393,14 @@ local function absorb_changes()
 end
 
 local function edit_change(change_id, opts)
+  opts = opts or {}
+  -- Merge global flags with local opts, with local opts taking precedence
+  local merged_opts = vim.tbl_extend("force", M.state.global_flags, opts)
   jj.edit_change(change_id, function()
     vim.notify("Checked out change " .. change_id, vim.log.levels.INFO)
     M.log()
     vim.cmd.checktime()
-  end, opts)
+  end, merged_opts)
 end
 
 local function edit_change_menu_impl(change_id, ignore_immutable)
@@ -473,6 +479,31 @@ local function switch_diff_viewer()
     M.config.diff_preset = preset
     vim.notify("Switched to diff viewer: " .. preset, vim.log.levels.INFO)
   end)
+end
+
+local function show_global_flags_menu()
+  local ignore_immutable = M.state.global_flags.ignore_immutable
+  local ignore_immutable_flag = ignore_immutable and "✓ --ignore-immutable" or "  --ignore-immutable"
+  local ignore_immutable_hl = ignore_immutable and "JJFlagEnabled" or "JJFlagDisabled"
+
+  local options = {
+    { key = 'i', label = ignore_immutable_flag, value = 'toggle_ignore_immutable', hl_group = ignore_immutable_hl },
+  }
+
+  dialog_window.show_floating_options({
+    prompt = 'Global flags (applied to rebase, squash, edit):',
+    options = options,
+    on_select = function(option)
+      if option.value == 'toggle_ignore_immutable' then
+        M.state.global_flags.ignore_immutable = not M.state.global_flags.ignore_immutable
+        -- Reopen the menu with updated state
+        show_global_flags_menu()
+      end
+    end,
+    on_cancel = function()
+      vim.notify("Global flags menu closed", vim.log.levels.INFO)
+    end
+  })
 end
 
 --------------------------------------------------------------------------------
@@ -697,7 +728,7 @@ local function prompt_destination_type(cb)
 end
 
 local function execute_rebase(source_ids, source_type, dest_id, dest_type)
-  jj.execute_rebase(source_ids, source_type, dest_id, dest_type, function()
+  jj.execute_rebase(source_ids, source_type, dest_id, dest_type, M.state.global_flags, function()
     clear_selections()
     M.log()
     vim.cmd.checktime()
@@ -821,7 +852,7 @@ local function describe_and_squash_changes(source_ids, target_id)
       ),
 
       on_submit = function(message)
-        jj.execute_squash(source_ids, target_id, message, function()
+        jj.execute_squash(source_ids, target_id, message, M.state.global_flags, function()
           clear_selections()
           M.log()
         end)
@@ -1010,6 +1041,7 @@ local actions = {
   ["undo"] = undo,
   ["set_revset"] = prompt_and_set_revset,
   ["switch_diff_viewer"] = switch_diff_viewer,
+  ["show_global_flags"] = show_global_flags_menu,
   ["open_diff"] = open_diff_for_changes,
   ["describe"] = function() M.with_change_at_cursor(describe) end,
   ["new_change"] = new_change,
