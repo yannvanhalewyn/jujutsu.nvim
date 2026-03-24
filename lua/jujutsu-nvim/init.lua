@@ -99,7 +99,7 @@ local diff_presets = {
     if #changes == 1 then
       vim.cmd(string.format("DiffviewOpen %s^!", changes[1].commit_sha))
     else
-      vim.cmd(string.format("DiffviewOpen %s...%s", changes[1].commit_sha, changes[#changes].commit_sha))
+      vim.cmd(string.format("DiffviewOpen %s...%s", changes[1].commit_sha .. "~1", changes[#changes].commit_sha))
     end
   end,
 
@@ -108,7 +108,7 @@ local diff_presets = {
       -- Diff with parent change
         vim.cmd(string.format("CodeDiff %s %s", changes[1].commit_sha .. "~1", changes[1].commit_sha))
     else
-      vim.cmd(string.format("CodeDiff %s %s", changes[#changes].commit_sha, changes[1].commit_sha))
+      vim.cmd(string.format("CodeDiff %s %s", changes[1].commit_sha .. "~1", changes[#changes].commit_sha))
     end
   end,
 
@@ -156,6 +156,31 @@ end
 
 local function get_selected_ids()
   return u.keys(M.state.selected_changes)
+end
+
+--- Get selected changes in chronological order (oldest to newest) by querying JJ
+--- Used to ensure deterministic ordering for operations like diffview and squashing
+--- @param callback fun(changes: JJChange[]) Callback with array of changes in chronological order (oldest to newest)
+local function get_ordered_selected_changes(callback)
+  local selected_ids = get_selected_ids()
+  if #selected_ids == 0 then
+    callback({})
+    return
+  end
+
+  jj.get_changes_by_ids(selected_ids, function(changes)
+    -- JJ log returns newest first, so reverse to get chronological order (oldest to newest)
+    callback(u.reverse(changes))
+  end)
+end
+
+--- Helper to extract change IDs from an array of changes
+--- @param changes JJChange[] Array of changes
+--- @return string[] Array of change IDs
+local function extract_change_ids(changes)
+  return vim.tbl_map(function(change)
+    return change.change_id
+  end, changes)
 end
 
 --------------------------------------------------------------------------------
@@ -806,9 +831,8 @@ end
 
 local function open_diff_for_changes()
   local viewer = get_diff_viewer()
-  local selected_ids = get_selected_ids()
-  if #selected_ids > 0 then
-    jj.get_changes_by_ids(selected_ids, viewer)
+  if #get_selected_ids() > 0 then
+    get_ordered_selected_changes(viewer)
   else
     M.with_change_at_cursor(function(change_id)
       handle_divergent_change(change_id, function(items, is_commit_data)
@@ -828,50 +852,64 @@ end
 -- Squash operations
 --------------------------------------------------------------------------------
 
-local function describe_and_squash_changes(source_ids, target_id)
-  local all_change_ids = vim.list_extend({}, source_ids)
-  table.insert(all_change_ids, target_id)
+--- Describe and squash changes with their descriptions combined
+--- @param source_changes JJChange[] Array of source changes to squash (in chronological order)
+--- @param target_change JJChange Target change to squash into
+local function describe_and_squash_changes(source_changes, target_change)
+  local source_ids = extract_change_ids(source_changes)
+  local target_id = target_change.change_id
 
-  jj.get_changes_by_ids(all_change_ids, function(changes)
-    local change_descriptions = {}
-    for _, change in ipairs(changes) do
-      if vim.trim(change.description) ~= "" then
-        table.insert(
-          change_descriptions,
-          string.format("JJ: %s\n%s", change.change_id, change.description)
-        )
-      end
+  -- Combine all changes for description display
+  local all_changes = vim.list_extend({}, source_changes)
+  table.insert(all_changes, target_change)
+
+  local change_descriptions = {}
+  for _, change in ipairs(all_changes) do
+    if vim.trim(change.description) ~= "" then
+      table.insert(
+        change_descriptions,
+        string.format("JJ: %s\n%s", change.change_id, change.description)
+      )
     end
+  end
 
-    capture_buffer.open({
-      content = table.concat(change_descriptions, "\n"),
-      filetype = 'jjdescription',
-      extra_help_text = string.format(
-        "JJ: Squashing %d %s into %s. Enter a description for the combined commit.",
-        #source_ids, #source_ids == 1 and "change" or "changes", target_id
-      ),
+  capture_buffer.open({
+    content = table.concat(change_descriptions, "\n"),
+    filetype = 'jjdescription',
+    extra_help_text = string.format(
+      "JJ: Squashing %d %s into %s. Enter a description for the combined commit.",
+      #source_ids, #source_ids == 1 and "change" or "changes", target_id
+    ),
 
-      on_submit = function(message)
-        jj.execute_squash(source_ids, target_id, message, M.state.global_flags, function()
-          clear_selections()
-          M.log()
-        end)
-      end,
+    on_submit = function(message)
+      jj.execute_squash(source_ids, target_id, message, M.state.global_flags, function()
+        clear_selections()
+        M.log()
+      end)
+    end,
 
-      on_abort = function()
-        vim.notify("Squash cancelled", vim.log.levels.INFO)
-      end
-    })
-  end)
+    on_abort = function()
+      vim.notify("Squash cancelled", vim.log.levels.INFO)
+    end
+  })
 end
 
 local function squash_change()
-  M.with_change_at_cursor(function(change_id)
+  M.with_change_at_cursor(function(cursor_change_id)
     local selected_ids = get_selected_ids()
     if #selected_ids > 0 then
-      describe_and_squash_changes(selected_ids, change_id)
+      -- Get ordered changes and target change for deterministic squashing
+      get_ordered_selected_changes(function(ordered_changes)
+        jj.get_changes_by_ids({ cursor_change_id }, function(target_changes)
+          describe_and_squash_changes(u.reverse(ordered_changes), target_changes[1])
+        end)
+      end)
     else
-      describe_and_squash_changes({ change_id }, change_id .. "-")
+      -- For single change, fetch both source and target (parent)
+      jj.get_changes_by_ids({ cursor_change_id, cursor_change_id .. "-" }, function(changes)
+        -- changes[1] is source, changes[2] is target (parent)
+        describe_and_squash_changes({ changes[1] }, changes[2])
+      end)
     end
   end)
 end
@@ -879,11 +917,13 @@ end
 -- Squash change into custom target
 local function squash_to_target(change_id)
   select_change({ prompt = "Select target to squash into" }, function(target_id)
-    describe_and_squash_changes({ change_id }, target_id)
+    jj.get_changes_by_ids({ change_id }, function(changes)
+      jj.get_changes_by_ids({ target_id }, function(target_changes)
+        describe_and_squash_changes(changes, target_changes[1])
+      end)
+    end)
   end)
 end
-
-
 
 --------------------------------------------------------------------------------
 -- Selection UI

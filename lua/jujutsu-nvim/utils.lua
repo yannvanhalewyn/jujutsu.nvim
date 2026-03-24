@@ -22,4 +22,12 @@ M.keys = function(t)
   return keys
 end
 
+M.reverse = function(list)
+  local reversed = {}
+  for i = #list, 1, -1 do
+    table.insert(reversed, list[i])
+  end
+  return reversed
+end
+
 return M
