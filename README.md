@@ -121,6 +121,8 @@ Press `?` in the log view to see all available keybindings organized by category
 | `q` | Close window | Close the log window |
 | `R` | Refresh | Refresh the log view |
 | `l` | Set custom revset | Opens the log on a new custom revset |
+| `v` | Switch diff viewer | Switch between diff viewer presets (difftastic, diffview, codediff) |
+| `G` | Toggle global flags | Show menu to toggle global jj flags |
 
 #### Basic Operations
 
@@ -128,9 +130,11 @@ Press `?` in the log view to see all available keybindings organized by category
 |-----|--------|-------------|
 | `d` | Describe | Edit the description of the change at cursor |
 | `n` | Create new change | Create new change after change at cursor |
+| `N` | New change options menu | Show menu with additional options for creating new changes |
 | `a` | Abandon change(s) | Abandon the change at cursor (or selected changes) |
-| `A` | Absorb change | Absorb the change at cursor |
+| `A` | Absorb change(s) | Absorb the change(s) at cursor or selected changes |
 | `e` | Edit (checkout) change | Edit (check out) the change at cursor |
+| `E` | Edit change options menu | Show menu with additional options for editing changes |
 | `u` | Undo last operation | Undo the last operation |
 
 #### Advanced Operations
@@ -294,11 +298,16 @@ The following action names can be used as string values in your keymap (or as th
 | `refresh` | Refresh the log view |
 | `undo` | Undo the last operation |
 | `set_revset` | Open log with custom revset |
+| `switch_diff_viewer` | Switch between diff viewer presets |
+| `show_global_flags` | Show menu to toggle global jj flags |
 | `open_diff` | Open diff viewer for change |
 | `describe` | Edit change description |
 | `new_change` | Create new change |
+| `new_change_menu` | Show new change options menu |
 | `abandon_changes` | Abandon change(s) |
+| `absorb_changes` | Absorb change(s) |
 | `edit_change` | Check out change |
+| `edit_change_menu` | Show edit change options menu |
 | `rebase_change` | Rebase change |
 | `squash_change` | Squash change |
 | `squash_to_target` | Squash to specific target |
@@ -306,6 +315,8 @@ The following action names can be used as string values in your keymap (or as th
 | `bookmark_menu` | Show bookmark operations |
 | `push_bookmarks` | Push bookmarks |
 | `push_bookmarks_and_create` | Push bookmarks with --allow-new |
+| `git_fetch` | Fetch from remote |
+| `pull_bookmark` | Pull bookmark from remote |
 | `toggle_change` | Toggle multi-selection |
 | `clear_selections` | Clear all selections |
 
