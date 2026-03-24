@@ -96,7 +96,7 @@ local diff_presets = {
     if #changes == 1 then
       vim.cmd(string.format("DiffviewOpen %s^!", changes[1].commit_sha))
     else
-      vim.cmd(string.format("DiffviewOpen %s...%s", changes[1].commit_sha, changes[#changes].commit_sha))
+      vim.cmd(string.format("DiffviewOpen %s~1..%s", changes[#changes].commit_sha, changes[1].commit_sha))
     end
   end,
 
