@@ -175,7 +175,7 @@ Now various operations can be performed on the selected changes:
 | `p` | Push | Pushes bookmarks for all selected changes |
 | `P` | Push create | Pushes bookmarks all selected changes (with `--allow-new`) |
 
-**Note**: Operations that don't support multi-selection (like `d` for describe, `e` for edit) always operate on the change under the cursor, ignoring selections.
+*Note*: 'edit' and 'describe' operations do not support multi-selection — they will always act on the change under the cursor, ignoring any active selection. While Jujutsu supports describe with multiple revsets, this is not implemented due to its complexity and uncommon use. If you'd find this useful, feel free to open an issue.
 
 #### Bookmarks
 
