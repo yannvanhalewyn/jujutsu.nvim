@@ -167,7 +167,7 @@ Now various operations can be performed on the selected changes:
 
 | Operation | Action | Description |
 |-----------|--------|-------------|
-| `n` | New |  Creates new change after all selected changes |
+| `n` | New |  Creates new change merging all selected change. AKA the MEGAMERGE |
 | `a` | Abandon | Abandons all selected changes |
 | `r` | Rebase |  Rebases all selected changes onto change at cursor |
 | `s` | Squash | Squashes all selected changes into change at cursor |
