@@ -34,7 +34,7 @@ M.show_floating_options = function(opts)
   table.insert(lines, "")
   local highlights = {}  -- Track where to highlight keys
   for _, option in ipairs(options) do
-    local line = string.format("    %s  %s", option.key:upper(), option.label)
+    local line = string.format("    %s  %s", option.key, option.label)
     table.insert(lines, line)
     -- Track position of key for highlighting (accounting for padding)
     local line_idx = #lines - 1  -- 0-based index
