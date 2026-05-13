@@ -1111,6 +1111,12 @@ local actions = {
 --- @param user_config JJConfig? User configuration to merge with defaults
 function M.setup(user_config)
   M.config = vim.tbl_deep_extend("force", default_config, user_config or {})
+  -- Coerce missing binding descriptions
+  for _, binding in pairs(M.config.keymap) do
+    if type(binding) == "table" and not binding.desc then
+      binding.desc = (type(binding.cmd) == "string" and binding.cmd) or "Unnamed custom command"
+    end
+  end
 end
 
 --- Open jj log view

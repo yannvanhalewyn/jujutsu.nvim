@@ -254,9 +254,7 @@ require("jujutsu-nvim").setup({
 ### Custom Keymaps
 
 You can customize keybindings in the log view by providing a `keymap` table in the setup configuration. Each key can map to:
-- A **string** representing a built-in action name (legacy format)
-- A **table** with `cmd` and `desc` fields (recommended format)
-- A **function** to run custom code
+- A **table** with `cmd` and optional `desc` fields, where `cmd` is either a built-in action string (see below) or a custom function
 - **`false`** to disable a default binding
 
 #### Example: Custom Keymaps
