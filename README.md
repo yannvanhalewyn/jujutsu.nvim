@@ -257,6 +257,7 @@ You can customize keybindings in the log view by providing a `keymap` table in t
 - A **string** representing a built-in action name (legacy format)
 - A **table** with `cmd` and `desc` fields (recommended format)
 - A **function** to run custom code
+- **`false`** to disable a default binding
 
 #### Example: Custom Keymaps
 
@@ -278,6 +279,10 @@ require("jujutsu-nvim").setup({
       end,
       desc = "Custom diff"
     },
+
+    -- Move a default binding
+    b = false,
+    ["gb"] = { cmd = "bookmark", desc = "Bookmark Change" }
   }
 })
 ```

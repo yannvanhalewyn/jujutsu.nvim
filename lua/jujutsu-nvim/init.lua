@@ -1129,10 +1129,12 @@ function M.log(args)
   run_in_jj_window(log_args, "JJ Log", function(buf)
     -- Bind keymaps
     for key, binding in pairs(M.config.keymap) do
-      vim.keymap.set(
-        "n", key, actions[binding.cmd] or binding.cmd,
-        { buffer = buf, silent = true, nowait = true, desc = "JJ: " .. binding.desc }
-      )
+      if binding ~= false then
+        vim.keymap.set(
+          "n", key, actions[binding.cmd] or binding.cmd,
+          { buffer = buf, silent = true, nowait = true, desc = "JJ: " .. binding.desc }
+        )
+      end
     end
 
     -- After loading the Jujutsu log, jump to the current change
