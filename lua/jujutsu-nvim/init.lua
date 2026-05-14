@@ -1075,6 +1075,8 @@ local function run_in_jj_log_window(args, title, setup_keymaps_fn, on_content_lo
     on_ready = function(window, buffer)
       M.state.log_buffer = buffer
       M.state.log_window = window
+      vim.wo[window].number = false
+      vim.wo[window].relativenumber = false
       setup_keymaps_fn(buffer, window)
     end,
     on_content_loaded = on_content_loaded,
