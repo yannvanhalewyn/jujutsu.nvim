@@ -216,6 +216,10 @@ end
 -- Cursor queries
 --------------------------------------------------------------------------------
 
+M.get_meta_at_line = function(line_num)
+  return render.line_meta[line_num]
+end
+
 M.get_meta_at_cursor = function(win)
   if not win or not vim.api.nvim_win_is_valid(win) then return nil end
   local line_num = vim.api.nvim_win_get_cursor(win)[1]

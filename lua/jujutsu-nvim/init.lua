@@ -955,27 +955,38 @@ end
 -- Selection UI
 --------------------------------------------------------------------------------
 
--- Navigate to next line with a change ID
+local function is_navigable_line(line_num)
+  local meta = log_view.get_meta_at_line(line_num)
+  if meta and (meta.kind == "header" or meta.kind == "file") then
+    return true
+  end
+  -- Fallback for buffers not rendered by log_view (defensive).
+  if not meta then
+    local line = vim.api.nvim_buf_get_lines(M.state.log_buffer, line_num - 1, line_num, false)[1]
+    return line ~= nil and jj.extract_change_id(line) ~= nil
+  end
+  return false
+end
+
+-- Navigate to next change header or expanded file line
 local function jump_to_next_change()
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
   local total_lines = vim.api.nvim_buf_line_count(M.state.log_buffer)
 
   for line_num = current_line + 1, total_lines do
-    local line = vim.api.nvim_buf_get_lines(M.state.log_buffer, line_num - 1, line_num, false)[1]
-    if line and jj.extract_change_id(line) then
+    if is_navigable_line(line_num) then
       vim.api.nvim_win_set_cursor(0, { line_num, 0 })
       return
     end
   end
 end
 
--- Navigate to previous line with a change ID
+-- Navigate to previous change header or expanded file line
 local function jump_to_prev_change()
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
 
   for line_num = current_line - 1, 1, -1 do
-    local line = vim.api.nvim_buf_get_lines(M.state.log_buffer, line_num - 1, line_num, false)[1]
-    if line and jj.extract_change_id(line) then
+    if is_navigable_line(line_num) then
       vim.api.nvim_win_set_cursor(0, { line_num, 0 })
       return
     end
