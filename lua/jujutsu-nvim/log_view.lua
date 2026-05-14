@@ -340,6 +340,11 @@ local function fetch_file_content(rev, path, callback)
   )
 end
 
+-- Total editor width below which the two diff panes are placed *below* the log
+-- window (each gets the full screen width split in half) instead of squeezed to
+-- the right of the log.
+local DIFF_SIDE_BY_SIDE_MIN_COLUMNS = 80
+
 local function ensure_diff_windows(log_win)
   if diff_left_win and diff_right_win
     and vim.api.nvim_win_is_valid(diff_left_win)
@@ -356,10 +361,19 @@ local function ensure_diff_windows(log_win)
   end
 
   vim.api.nvim_set_current_win(log_win)
-  vim.cmd("rightbelow vnew")
-  diff_right_win = vim.api.nvim_get_current_win()
-  vim.cmd("leftabove vnew")
-  diff_left_win = vim.api.nvim_get_current_win()
+  if vim.o.columns >= DIFF_SIDE_BY_SIDE_MIN_COLUMNS then
+    -- Wide: log | parent | current
+    vim.cmd("rightbelow vnew")
+    diff_right_win = vim.api.nvim_get_current_win()
+    vim.cmd("leftabove vnew")
+    diff_left_win = vim.api.nvim_get_current_win()
+  else
+    -- Narrow: log on top, parent | current below
+    vim.cmd("belowright new")
+    diff_right_win = vim.api.nvim_get_current_win()
+    vim.cmd("leftabove vnew")
+    diff_left_win = vim.api.nvim_get_current_win()
+  end
   return diff_left_win, diff_right_win
 end
 
