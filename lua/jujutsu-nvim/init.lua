@@ -11,6 +11,7 @@ local capture_buffer = require("jujutsu-nvim.capture_buffer")
 local jj = require("jujutsu-nvim.jujutsu")
 local u = require("jujutsu-nvim.utils")
 local help_window = require("jujutsu-nvim.help_window")
+local log_view = require("jujutsu-nvim.log_view")
 
 local M = {}
 
@@ -57,7 +58,9 @@ local default_config = {
     ["@"] = { cmd = "jump_to_current_change", desc = "Jump to the currently edited change" },
     q = { cmd = "quit", desc = "Close window" },
     R = { cmd = "refresh", desc = "Refresh log view" },
-    ["<CR>"] = { cmd = "open_diff", desc = "Open diff viewer" },
+    ["<CR>"] = { cmd = "open_diff", desc = "Open diff (commit or file)" },
+    ["<Tab>"] = { cmd = "toggle_inline_files", desc = "Toggle changed files for this commit" },
+    ["o"] = { cmd = "open_file_at_cursor", desc = "Open file under cursor in split" },
     v = { cmd = "switch_diff_viewer", desc = "Switch diff viewer preset" },
     G = { cmd = "show_global_flags", desc = "Toggle global flags", nowait = true },
     l = { cmd = "set_revset", desc = "Set custom revset" },
@@ -188,17 +191,29 @@ end
 --------------------------------------------------------------------------------
 
 --- Extracts the change ID of the change at cursor, and when valid calls the
---- operation with it.
+--- operation with it. If the cursor is on a description or file line (within
+--- an expanded commit), walks upward to find the enclosing commit header.
 --- @param operation fun(change_id: string) Function to call with the change ID
 M.with_change_at_cursor = function(operation)
-  local line = vim.api.nvim_get_current_line()
-  local change_id = jj.extract_change_id(line)
-
-  if change_id and #change_id >= 4 then
-    operation(change_id)
-  else
+  local buf = M.state.log_buffer
+  if not buf or not vim.api.nvim_buf_is_valid(buf) then
     vim.notify("Could not find change ID on current line", vim.log.levels.WARN)
+    return
   end
+
+  local cur_line = vim.api.nvim_win_get_cursor(0)[1]
+  for line_num = cur_line, 1, -1 do
+    local line = vim.api.nvim_buf_get_lines(buf, line_num - 1, line_num, false)[1]
+    if line then
+      local change_id = jj.extract_change_id(line)
+      if change_id and #change_id >= 4 then
+        operation(change_id)
+        return
+      end
+    end
+  end
+
+  vim.notify("Could not find change ID on current line", vim.log.levels.WARN)
 end
 
 --- @class SelectChangeOpts
@@ -848,6 +863,17 @@ local function open_diff_for_changes()
   end
 end
 
+-- <CR> dispatcher: on a file line, open native diff for that file; otherwise
+-- fall back to the configured whole-change diff viewer.
+local function on_enter()
+  local meta = log_view.get_meta_at_cursor(M.state.log_window)
+  if meta and meta.kind == "file" then
+    log_view.open_diff_at_cursor(M.state.log_window)
+  else
+    open_diff_for_changes()
+  end
+end
+
 --------------------------------------------------------------------------------
 -- Squash operations
 --------------------------------------------------------------------------------
@@ -1048,6 +1074,7 @@ local function close_jj_window()
   end
 
   M.state = default_state
+  log_view.reset()
 end
 
 local function run_in_jj_window(args, title, setup_keymaps_fn)
@@ -1079,6 +1106,7 @@ local function run_in_jj_log_window(args, title, setup_keymaps_fn, on_content_lo
       vim.wo[window].relativenumber = false
       setup_keymaps_fn(buffer, window)
     end,
+    process_output = log_view.process_output,
     on_content_loaded = on_content_loaded,
     on_close = function()
       M.state.log_window = nil
@@ -1102,7 +1130,14 @@ local actions = {
   ["set_revset"] = prompt_and_set_revset,
   ["switch_diff_viewer"] = switch_diff_viewer,
   ["show_global_flags"] = show_global_flags_menu,
-  ["open_diff"] = open_diff_for_changes,
+  ["open_diff"] = on_enter,
+  ["toggle_inline_files"] = function()
+    log_view.toggle_at_cursor(M.state.log_buffer, M.state.log_window)
+    update_selection_display()
+  end,
+  ["open_file_at_cursor"] = function()
+    log_view.open_file_at_cursor(M.state.log_window)
+  end,
   ["describe"] = function() M.with_change_at_cursor(describe) end,
   ["new_change"] = new_change,
   ["new_change_menu"] = new_change_menu,
@@ -1143,7 +1178,7 @@ end
 --- @param args string[]? Additional arguments to pass to jj log
 function M.log(args)
   args = args or {}
-  local log_args = { "log" }
+  local log_args = { "log", "-s" }
 
   -- Add custom revset if set
   if M.state.custom_revset then
@@ -1152,6 +1187,12 @@ function M.log(args)
   end
 
   vim.list_extend(log_args, args)
+
+  -- Capture current working-copy change_id; on first open also auto-expand `@`.
+  -- A non-nil log_buffer indicates a refresh into the existing window.
+  local is_first_open = M.state.log_buffer == nil
+  log_view.prepare_open(is_first_open)
+
   run_in_jj_log_window(log_args, "JJ Log", function(buf)
     -- Bind keymaps
     for key, binding in pairs(M.config.keymap) do

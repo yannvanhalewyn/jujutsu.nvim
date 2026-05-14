@@ -249,6 +249,7 @@ end
 
 --- @class PlainBufferOpts : TerminalWindowOpts
 --- @field on_content_loaded fun(window: number, buffer: number)? Fired after lines and highlights are applied
+--- @field process_output fun(lines: string[], spans: table): { lines: string[], spans: table }? Hook to transform parsed output before it's written to the buffer
 
 --- Runs a jj command and renders its colorized output into a plain `nofile`
 --- buffer (no embedded terminal). ANSI SGR codes from `--color=always` are
@@ -332,11 +333,21 @@ M.run_command_in_plain_buffer = function(args, opts)
         vim.schedule(function()
           if not vim.api.nvim_buf_is_valid(buffer) then return end
 
+          local final_lines = lines
+          local final_spans = all_spans
+          if opts.process_output then
+            local processed = opts.process_output(lines, all_spans)
+            if processed then
+              final_lines = processed.lines or final_lines
+              final_spans = processed.spans or final_spans
+            end
+          end
+
           vim.bo[buffer].modifiable = true
-          vim.api.nvim_buf_set_lines(buffer, 0, -1, false, lines)
+          vim.api.nvim_buf_set_lines(buffer, 0, -1, false, final_lines)
           vim.bo[buffer].modifiable = false
 
-          for line_num, spans in pairs(all_spans) do
+          for line_num, spans in pairs(final_spans) do
             for _, span in ipairs(spans) do
               vim.api.nvim_buf_set_extmark(buffer, ns_id, line_num - 1, span.col, {
                 end_col  = span.end_col,

@@ -24,6 +24,8 @@ local action_help_info = {
   set_revset = { group = "log", order = 3 },
 
   open_diff = { group = "navigation", order = 3 },
+  toggle_inline_files = { group = "navigation", order = 4 },
+  open_file_at_cursor = { group = "navigation", order = 5 },
 
   describe = { group = "basic_operations", order = 1 },
   new_change = { group = "basic_operations", order = 2 },
