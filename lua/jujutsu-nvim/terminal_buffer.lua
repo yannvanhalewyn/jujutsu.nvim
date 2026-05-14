@@ -29,17 +29,17 @@ M.run_command_in_terminal_window = function (args, opts)
     -- Reuse existing window - replace buffer with new terminal buffer
     -- Save current window to restore focus later
     local current_win = vim.api.nvim_get_current_win()
-    
+
     -- Focus the window temporarily
     vim.api.nvim_set_current_win(window)
 
     -- Create a new empty buffer
     vim.cmd("enew")
     buffer = vim.api.nvim_get_current_buf()
-    
+
     -- Start terminal in the new buffer using the shell command
-    vim.fn.termopen(shell_cmd)
-    
+    vim.fn.jobstart(shell_cmd, { term = true })
+
     -- Restore focus to original window after a brief delay
     -- This ensures the terminal buffer has time to initialize
     if current_win ~= window and vim.api.nvim_win_is_valid(current_win) then
