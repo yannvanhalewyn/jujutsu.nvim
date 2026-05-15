@@ -349,6 +349,16 @@ end
 -- the right of the log.
 local DIFF_SIDE_BY_SIDE_MIN_COLUMNS = 80
 
+-- vnew/new inherit window-local options from the splitting window. The log
+-- window has `number`/`relativenumber` forced off, which propagates to a
+-- diff/file split. Reset the new window to the user's global value so their
+-- editor-wide preference (e.g. `set number`) is honoured here.
+local function restore_number_options(win)
+  if not vim.api.nvim_win_is_valid(win) then return end
+  vim.wo[win].number = vim.api.nvim_get_option_value("number", { scope = "global" })
+  vim.wo[win].relativenumber = vim.api.nvim_get_option_value("relativenumber", { scope = "global" })
+end
+
 local function ensure_diff_windows(log_win)
   if diff_left_win and diff_right_win
     and vim.api.nvim_win_is_valid(diff_left_win)
@@ -378,6 +388,8 @@ local function ensure_diff_windows(log_win)
     vim.cmd("leftabove vnew")
     diff_left_win = vim.api.nvim_get_current_win()
   end
+  restore_number_options(diff_left_win)
+  restore_number_options(diff_right_win)
   return diff_left_win, diff_right_win
 end
 
@@ -388,6 +400,7 @@ local function ensure_file_window(log_win)
   vim.api.nvim_set_current_win(log_win)
   vim.cmd("rightbelow new")
   file_split_win = vim.api.nvim_get_current_win()
+  restore_number_options(file_split_win)
   return file_split_win
 end
 
@@ -472,16 +485,21 @@ M.open_diff_at_cursor = function(log_win)
   end
 
   -- Activate diff mode in both windows and rebind `q` on the current buffers.
+  -- restore_number_options runs here too: `:edit` and buffer-attach autocmds
+  -- can reset window-local options after we set them in ensure_diff_windows,
+  -- so re-apply once the buffer assignments have settled.
   vim.schedule(function()
     local close_fn = function() close_diff_windows(log_win) end
     if vim.api.nvim_win_is_valid(left_win) then
       vim.api.nvim_set_current_win(left_win)
       vim.cmd("diffthis")
+      restore_number_options(left_win)
       bind_close_q(left_win, close_fn)
     end
     if vim.api.nvim_win_is_valid(right_win) then
       vim.api.nvim_set_current_win(right_win)
       vim.cmd("diffthis")
+      restore_number_options(right_win)
       bind_close_q(right_win, close_fn)
     end
   end)
@@ -512,6 +530,8 @@ M.open_file_at_cursor = function(log_win)
     end)
   end
 
+  -- Re-apply after `:edit`/buffer-attach autocmds may have reset options.
+  vim.schedule(function() restore_number_options(win) end)
   bind_close_q(win, function() close_file_split(log_win) end)
 end
 
