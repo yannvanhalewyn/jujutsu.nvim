@@ -13,8 +13,7 @@ A Neovim plugin for working with [Jujutsu](https://github.com/martinvonz/jj) ver
 - **Rebase Support**: Interactive rebasing with multiple source types (revision, subtree, branch) and destination types (onto, after, before)
 - **Squash Operations**: Squash single or multiple changes with combined descriptions
 - **Multi-Selection**: Select multiple changes for batch operations
-- **Difftastic Integration**: View diffs using [difftastic](https://github.com/Wilfred/difftastic)
-- **Diffview Integration**: View diffs using [diffview](https://github.com/sindrets/diffview.nvim)
+- **Integrates with your favorite diff viewer**: View diffs using [difftastic.nvim](https://github.com/clabby/difftastic.nvim), [diffview.nvim](https://github.com/sindrets/diffview.nvim), [CodeDiff](https://github.com/esmuellert/codediff.nvim)
 - **Extensible**: Via own keybindings and Lua API
 
 <img width="981" height="652" alt="Screenshot 2026-01-05 at 03 22 58" src="https://github.com/user-attachments/assets/b9283c1d-76ac-42a8-bfcc-674f098c9437" />
@@ -28,6 +27,7 @@ A Neovim plugin for working with [Jujutsu](https://github.com/martinvonz/jj) ver
 
 - [difftastic.nvim](https://github.com/clabby/difftastic.nvim) - For the default "difftastic" diff viewer
 - [diffview.nvim](https://github.com/sindrets/diffview.nvim) - For the "diffview" diff viewer preset
+-
 
 ## Installation
 

@@ -1067,6 +1067,26 @@ local function run_in_jj_window(args, title, setup_keymaps_fn)
   })
 end
 
+local function run_in_jj_log_window(args, title, setup_keymaps_fn, on_content_loaded)
+  terminal_buffer.run_command_in_plain_buffer(args, {
+    buf = M.state.log_buffer,
+    window = M.state.log_window,
+    title = title,
+    on_ready = function(window, buffer)
+      M.state.log_buffer = buffer
+      M.state.log_window = window
+      vim.wo[window].number = false
+      vim.wo[window].relativenumber = false
+      setup_keymaps_fn(buffer, window)
+    end,
+    on_content_loaded = on_content_loaded,
+    on_close = function()
+      M.state.log_window = nil
+      M.state.log_buffer = nil
+    end,
+  })
+end
+
 --------------------------------------------------------------------------------
 -- Public API
 --------------------------------------------------------------------------------
@@ -1132,7 +1152,7 @@ function M.log(args)
   end
 
   vim.list_extend(log_args, args)
-  run_in_jj_window(log_args, "JJ Log", function(buf)
+  run_in_jj_log_window(log_args, "JJ Log", function(buf)
     -- Bind keymaps
     for key, binding in pairs(M.config.keymap) do
       if binding ~= false then
@@ -1142,17 +1162,8 @@ function M.log(args)
         )
       end
     end
-
-    -- After loading the Jujutsu log, jump to the current change
-    vim.api.nvim_create_autocmd("TermClose", {
-      buffer = buf,
-      once = true,
-      callback = function()
-        vim.schedule(function()
-          jump_to_current_change(true)
-        end)
-      end,
-    })
+  end, function()
+    jump_to_current_change(true)
   end)
 end
 
